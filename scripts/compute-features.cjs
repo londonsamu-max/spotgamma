@@ -104,8 +104,30 @@ async function fetchJson(url) {
   return resp.json();
 }
 
+// Compute HIRO consensus across available symbols for the CFD
+function computeHiroAvg(hiroObj) {
+  if (!hiroObj) return null;
+  const pctls = Object.values(hiroObj).map(h => h?.percentile).filter(p => p != null);
+  if (pctls.length === 0) return null;
+  return pctls.reduce((a, b) => a + b, 0) / pctls.length;
+}
+
+function computeHiroConsensus(hiroObj) {
+  if (!hiroObj) return null;
+  const pctls = Object.values(hiroObj).map(h => h?.percentile).filter(p => p != null);
+  if (pctls.length === 0) return null;
+  const bull = pctls.filter(p => p > 20).length;
+  const bear = pctls.filter(p => p < -20).length;
+  return bull > bear ? "bullish" : bear > bull ? "bearish" : "mixed";
+}
+
+function qqqDelta1h(hiroHistObj) {
+  // Would require hiroHistory with 1h prior snapshots — placeholder for future
+  return null;
+}
+
 // ── Strike feature computation ──
-function analyzeBars(bars, prevSnap, tapeData, instTrades, vixLevel, vixTrend, minBucket, priceRelOpen, currentPrice) {
+function analyzeBars(bars, prevSnap, tapeData, instTrades, vixLevel, vixTrend, minBucket, priceRelOpen, currentPrice, hiroData) {
   // Build lookup of tape.strikeFlow by strike
   const tapeByStrike = {};
   let tapeTotal = 0;
@@ -271,6 +293,31 @@ function analyzeBars(bars, prevSnap, tapeData, instTrades, vixLevel, vixTrend, m
 
     // L125 ⛔ DEPRECATED — fail OOS
 
+    // ═══ L126-L130 discovered from HIRO reconstruction OOS ═══
+
+    // HIRO avg percentile + consensus passed in from caller
+    const hiroAvg = hiroData?.avgPctl ?? null;
+    const hiroConsensus = hiroData?.consensus ?? null;
+    const qqqHiro = hiroData?.qqqPctl ?? null;
+
+    // L126 ⭐⭐⭐: HIRO consensus bearish + afternoon → BREAK (N=104 OOS, retention 3.4x)
+    if (hiroConsensus === "bearish" && (minBucket === "aft" || minBucket === "close")) {
+      lessonsActive.push("L126");
+      lessonFlags.L126 = { signal: "break", direction: "approach_cont", tier: "⭐⭐⭐" };
+    }
+
+    // L129 ⭐⭐: HIRO avg moderately bearish + afternoon → BREAK (N=64 OOS, retention 6.03x)
+    if (hiroAvg != null && hiroAvg >= -50 && hiroAvg < -20 && (minBucket === "aft" || minBucket === "close")) {
+      lessonsActive.push("L129");
+      lessonFlags.L129 = { signal: "break", direction: "approach_cont", hiroAvg: Math.round(hiroAvg), tier: "⭐⭐" };
+    }
+
+    // L130 ⭐⭐: QQQ HIRO extreme bearish → BREAK (N=132 OOS, retention 0.88x)
+    if (qqqHiro != null && qqqHiro < -70) {
+      lessonsActive.push("L130");
+      lessonFlags.L130 = { signal: "break", direction: "approach_cont", qqqHiro, tier: "⭐⭐" };
+    }
+
     // Aggregate directional bias from active lessons
     let bounceCount = 0, breakCount = 0, pinCount = 0;
     for (const flag of Object.values(lessonFlags)) {
@@ -365,7 +412,14 @@ async function main() {
     const primarySym = cfd === "NAS100" ? "SPX" : cfd === "US30" ? "DIA" : "GLD";
     const tapeData = cfdData.tape?.[primarySym] || null;
 
-    const results = analyzeBars(bars, prevSnap, tapeData, instTrades, vixLevel, vxTrend, minBucket, priceRelOpen, currentPrice);
+    // HIRO data for L126/L129/L130
+    const hiroData = {
+      avgPctl: computeHiroAvg(cfdData.hiro),
+      consensus: computeHiroConsensus(cfdData.hiro),
+      qqqPctl: cfd === "NAS100" ? (cfdData.hiro?.QQQ?.percentile ?? null) : null,
+    };
+
+    const results = analyzeBars(bars, prevSnap, tapeData, instTrades, vixLevel, vxTrend, minBucket, priceRelOpen, currentPrice, hiroData);
     snapshot[cfd] = results;
 
     // Collect flip events + activations
