@@ -181,8 +181,21 @@ Every FULL cycle MUST check ALL 14 items in order. No exceptions.
   - **Strong call_strong red bar + callGamma<0** = strong structural resistance, SHORT with high conviction
   - **flip_zone bar** = wait for flip confirmation OR place BOTH LONG and SHORT at edges of flip zone
   - **dealer_short_puts_support_fragile** = support yes but BREAKS faster than classic support — use tighter SL on LONG, or prefer SHORT breakdown entries
-- **Run:** `node scripts/compute-dominance.cjs --save` (computes, saves snapshot, logs flips). Read `agent-state.json → dominanceSnapshot` for previous cycle comparison. Append flips to `data/flip-events.jsonl`.
-- **Report in cycle log:** top 3 flip_zone strikes + any flip events from this cycle.
+- **Run:** `node scripts/compute-features.cjs --save` (computes dominance + ALL L114-L125 features, saves snapshot, logs flips + lesson activations). Read `agent-state.json → dominanceSnapshot` for previous cycle comparison. Append flips to `data/flip-events.jsonl`, activations to `data/lesson-activations.jsonl`.
+- **Report in cycle log:** top 3 flip_zone strikes + any flip events + top lesson activations from this cycle.
+
+### 5.2 ⭐ LESSON ACTIVATIONS — READ FROM FEATURE COMPUTER (L114-L125)
+After running `compute-features.cjs`, `agent-state.json → dominanceSnapshot` contains per-strike activations. Each strike has:
+- `lessonsActive: ["L114", "L120"]` — which lessons fire given current context
+- `netSignal: "break" | "bounce" | "pin" | "mixed"` — aggregated direction
+- `convictionScore: int` — break count − bounce count
+
+**USE IN ENTRIES:** When placing an order at a strike, check its `lessonsActive` and respect:
+- If `L114` active → lean SHORT break / LONG upside breakout, NEVER fade
+- If `L115` active → BOUNCE LONG is a primary signal
+- If `L120` active → NO directional trade at this strike (pin) — use as TP
+- If `L121` active → **highest conviction BREAK entry** (multi-lesson confluence)
+- If `L122` active → BOUNCE LONG with smart-money confirmation
 
 ### 6. VOLATILITY
 - Overall regime, term structure (contango/backwardation)
@@ -298,6 +311,36 @@ Save `marketStructure` per CFD to agent-state.json (e.g., `"NAS100": "congestion
 - **Save setups** to `agent-state.json → preIdentifiedSetups` with trigger level, gamma, direction, rationale, scenarios.
 - **Save session stats** to `agent-state.json → todayStats`: range, trades, congestion cycles, HIRO/VRP/regime at close.
 
+### 14.X ⭐ APPLY L114-L125 LESSONS PER ORDER (MANDATORY from 2026-04-17)
+
+For EACH `pendingOrder` being written to `agent-orders.json`:
+
+1. **Read the strike's `lessonsActive[]`** from `agent-state.json → dominanceSnapshot` (already computed by `compute-features.cjs`)
+
+2. **Apply conviction adjustments:**
+
+| Lesson | If active → Action |
+|---|---|
+| **L114** (VIX ≥25) | Prefer BREAKOUT; reject BOUNCE orders at this strike |
+| **L115** (VIX 15-20 + strike +1-3% above spot) | BOUNCE LONG confirmed; upgrade conviction to HIGH |
+| **L116** (afternoon + momentum already +0.3-1%) | BREAK continuation; no counter-trend SHORTs |
+| **L120** (share ≥5% pin) | Use as TP magnetic only; NOT directional entry |
+| **L121** (share 0.1-1% + VIX low) | **MAX CONVICTION BREAK** — possible SWING upgrade |
+| **L122** (largestPrem ≥$1M + VIX down) | BOUNCE LONG with smart-money confluence; upgrade conviction |
+| **L123/L124/L125** (break signals) | Reinforce break direction; if confluence with L114 → max size |
+
+3. **Conflict resolution** (when lessons disagree at same strike):
+   - **L115 vs L114:** If VIX on the boundary (~19-21), L114 takes precedence if any other BREAK lesson is also active.
+   - **L120 vs L119/L121:** L120 (high concentration pin) dominates L119/L121 (low concentration break). If strike is top-5 by flow, it's a pin, not a break target.
+   - **L122 vs L114:** Smart-money bounce (L122) CAN override L114 when largestPrem ≥$1M AND gamma>500M (wall too strong for retail to break).
+
+4. **Logging:** Include in `rationale` which lessons activated and their net signal. Example:
+   ```
+   "rationale": "SPX$7000 -1524M red wall BREAKDOWN. L114 (VIX 26 high, +17pp break OOS) + L116 (aft + momentum +0.5%, +22pp). Conviction HIGH."
+   ```
+
+5. **If NO lessons fire + signal is weak:** reduce position size 50% or skip the order. The absence of active lessons means we're in a low-edge environment.
+
 ## Entry Models (from Markets in Profile + Options books)
 1. **Fade Excess** — Price rejected at value area extreme (positive gamma)
 2. **Bracket Breakout** — Range break with volume (negative gamma amplifies)
@@ -391,7 +434,39 @@ Key lessons stored in agent-state.json. Most critical:
 - L110: **CLASSIFY MARKET STRUCTURE PER CFD EVERY CYCLE.** Accumulation, distribution, markup, markdown, congestion, squeeze, trend day, rotation day. The structure determines tradeMode and strategy. Don't fight the structure. Save to agent-state.json → marketStructure.
 - L111: **CONFLICT PRIORITY RULES.** When rules conflict: (1) Statistical rules (N>200) override single lessons. NAS SHORT very_neg=40%WR → use SCALP not INTRADAY/SWING. (2) L76 overnight rules override L83 LEVEL default. (3) Freefall (HIRO<P10 + bars breaking) overrides L105 congestion LONGs — SHORT only in freefall. (4) Flow magnitude > gamma magnitude = BREAK per L63, add +2 to L60 BREAK score. (5) When HIRO signals conflict between symbols (L92), trade the individual CFD based on ITS ETF HIRO (QQQ for NAS, DIA for US30). (6) Power hour HIRO changes are unreliable (L93) — don't change positions in last 60min based on HIRO alone.
 - L112: **TRADE MODE UPGRADE.** A SCALP can become INTRADAY, an INTRADAY can become SWING — but NEVER downgrade. When pyramid signals fire on a SCALP, upgrade to INTRADAY first. When HIRO goes extreme on an INTRADAY, upgrade to SWING. Update tradeMode, adjust SL/volume, enable pyramiding.
-- L113: **DOMINANCE FLIP PER STRIKE = LEADING INDICATOR.** Each strike has callGamma and putGamma — the ratio tells WHICH side drives the level. `callDominance = |callGamma|/(|callGamma|+|putGamma|)`. Buckets: ≥0.80 call_strong, 0.40-0.60 flip_zone, <0.20 put_strong. When dominance crosses 0.5 between cycles = **FLIP EVENT** — the market structure at that strike changed. A call→put flip at resistance = resistance weakening (breakout signal). A put→call flip at support = support weakening (breakdown signal). Strikes in flip_zone (0.40-0.60) are transitioning and are the highest-information strikes. Combined with gamma SIGN: `dealer_short_puts_support_fragile` (put-dom + negGamma) = support breaks faster than classic. Run `scripts/compute-dominance.cjs --save` each FULL cycle. Snapshot in `agent-state.json → dominanceSnapshot`, flip log in `data/flip-events.jsonl`.
+- L113: **DOMINANCE FLIP PER STRIKE = LEADING INDICATOR.** Each strike has callGamma and putGamma — the ratio tells WHICH side drives the level. `callDominance = |callGamma|/(|callGamma|+|putGamma|)`. Buckets: ≥0.80 call_strong, 0.40-0.60 flip_zone, <0.20 put_strong. When dominance crosses 0.5 between cycles = **FLIP EVENT** — the market structure at that strike changed. A call→put flip at resistance = resistance weakening (breakout signal). A put→call flip at support = support weakening (breakdown signal). Strikes in flip_zone (0.40-0.60) are transitioning and are the highest-information strikes. Combined with gamma SIGN: `dealer_short_puts_support_fragile` (put-dom + negGamma) = support breaks faster than classic. Run `scripts/compute-features.cjs --save` each FULL cycle. Snapshot in `agent-state.json → dominanceSnapshot`, flip log in `data/flip-events.jsonl`.
+
+## NEW LESSONS L114-L125 — Derived from OOS Backtest (5,289 touches SPY+QQQ, train 2024-12 → 2025-09, test 2025-10 → 2026-04)
+
+**Todas estas lessons sobreviven OOS validation (retention ≥50%, sign preserved).** Se ejecutan automáticamente vía `node scripts/compute-features.cjs --save` (ya incluido en checklist 5.1 y 14.X).
+
+- **L114 ⭐⭐⭐: VIX ≥ 25 = BREAK BIAS.** Touches a gamma bars con VIX ≥25 breakean a 4h/EOD (+17 a +33pp edge OOS, N_test=452). VIX ≥30 = 77% break a EOD. **Preferir breakout entries, nunca fade.** Clarifica L94 (VIX>20 ≠ universalmente más bounces — solo aplica a 20-25).
+- **L115 ⭐⭐⭐: VIX [15-20] + STRIKE +1-3% ARRIBA DEL PRECIO = BOUNCE LONG.** El hallazgo más limpio (+26pp bounce OOS, N_test=106). 61% bounce test. Entry: LONG con SL debajo del strike siguiente. Para NAS100 ~26000: strike a 260-780pts arriba. **Condiciones necesarias:** VIX en [15,20) AND distancia strike-precio entre +1% y +3%.
+- **L116 ⭐⭐: TARDE (sessionProgress >0.7) + PRECIO YA +0.3-1% ABOVE OPEN = BREAK CONTINUATION.** +22.7pp break OOS (N=127). En afternoon con momentum alcista establecido, NO fadear — break continúa. Combina con L125.
+- **L117 ⭐: MORNING PRIMERA HORA = BOUNCE LEVE.** +3.6pp bounce EOD (N=768). Edge débil, usar solo como filtro secundario. Morning touches tienden a mantenerse.
+- **L118 ⭐: oiRatio ≥ 0.7 (call-heavy strike) = FLAT BIAS.** ⚠️ **REQUIERE extensión server:** live feed solo expone `oi` total, no callOI/putOI. Hasta que se agregue, L118 inactiva. Cuando disponible: -7pp break, strikes call-heavy tienden a rango, usar para scalp range no directional.
+- **L119 ⭐⭐: flow_strikeShareOfDay [0.1%, 1%] = BREAK.** Strike acumulando atención moderada (0.1-1% premium diario) rompe 54% en 4h, 53% EOD (+11pp OOS, N=178). ⚠️ **Limitación:** tape.strikeFlow live solo expone top-5, que típicamente tienen >5%. L119 requiere visibilidad de strikes fuera de top-5.
+- **L120 ⭐⭐: flow_strikeShareOfDay ≥ 5% = PIN/FLAT.** Strike de consenso con ≥5% flow = imán magnético. -19pp break OOS (23% vs 40% baseline). Usar como **TP magnético**, NO directional break entry. Activable en live (top-5 strikes en tape normalmente caen aquí).
+- **L121 ⭐⭐⭐: flow_strikeShareOfDay 0.1-1% + VIX LOW [15-20] = BREAK FUERTE.** El upgrade de L119. **62% break OOS en 4h** (edge CRECIÓ OOS de +20pp a +26pp, retention 21.74x). Mecanismo: retail momentum con dealers desatentos. Cuando activa, breakout con **máxima convicción** (posible SWING si continuation).
+- **L122 ⭐⭐: largestPrem ≥ $1M + vixTrend5d = DOWN = BOUNCE LONG.** +14pp bounce OOS (N=31). Trade gigante (≥$1M) en el strike mientras VIX cae 5d = smart money comprando el piso. Entry LONG, SL debajo del strike siguiente.
+- **L123 ⭐: largestPrem [$200K, $1M] + vixTrend5d = FLAT = BREAK.** +17pp break OOS (N=33). Tamaño medio institucional sin dirección macro = reposicionamiento táctico, el strike cede.
+- **L124 ⭐: instShare < 0.5% + vixTrend5d = FLAT = BREAK (retail unchecked).** +13pp break OOS (N=64). Sin smart money + VIX flat = retail domina y empuja breakout.
+- **L125 ⭐: flow_strikeShareOfDay [1-5%] + sessionProgress [0.7-0.9] = BREAK LATE.** +14pp break OOS (N=155). Strike con atención creciente en última hora de sesión → rompe. Combina con L116.
+
+### PRIORIDAD DE LESSONS NUEVAS (L114-L125)
+
+**Tier ⭐⭐⭐ (aplicar SIEMPRE):** L114, L115, L121
+**Tier ⭐⭐ (alta confianza):** L116, L119, L120, L122
+**Tier ⭐ (contexto, edge pequeño):** L117, L123, L124, L125
+**⚠️ Inactivas por limitación de data live:** L118 (necesita callOI/putOI split), L119/L121 parcialmente (top-5 strikes only)
+
+### JERARQUÍA CONFLICT L114 vs L94 (VIX existente)
+Cuando regla dice "VIX > X = más bounces" vs L114 "VIX ≥25 = breaks":
+- VIX < 15 (v_low): evitar bars (poco edge, flat dominante)
+- VIX [15, 20): usa L115 + L121 (bounces en strike-pos; breaks en strike-share)
+- VIX [20, 25): régimen "confiable" — bars aguantan, bounces más probables (L94 original)
+- VIX [25, 30): **L114 ACTIVA** — bars ceden 54% (break bias)
+- VIX ≥ 30: **L114 EXTREMA** — bars ceden 69-77% (break)
 
 ## Statistical Rules (576-day backtest, 160K candles, 2,246 touch events)
 

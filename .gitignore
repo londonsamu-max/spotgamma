@@ -11,3 +11,7 @@ data/_cycle_*.json
 data/historical/
 # Large rolling datasets
 data/market-snapshots-rolling.json
+# Backtest v2 raw event files (too large, reproducible via scripts)
+data/backtest-v2/events.jsonl
+data/backtest-v2/events-enriched.jsonl
+data/backtest-v2/events-enriched-v2.jsonl

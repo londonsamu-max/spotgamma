@@ -42,7 +42,31 @@ Tu rol es ejecutar con máxima consistencia cada ciclo.
 - L102: Mínimo 1 orden dentro 50pts NAS / $5 XAU / 150pts US30 siempre
 - L104: Los 3 CFDs siempre — cobertura cero = falla crítica
 - L110: Clasificar estructura de mercado por CFD cada ciclo
-- L113: **DOMINANCE FLIP per strike** — correr `node scripts/compute-dominance.cjs --save` en cada ciclo FULL. Strike flip_zone (dom 0.40-0.60) = leading indicator. `dealer_short_puts_support_fragile` = support frágil, prefer breakdown SHORTs. Snapshot en `agent-state.json → dominanceSnapshot`, flips en `data/flip-events.jsonl`.
+- L113: **DOMINANCE FLIP per strike** — correr `node scripts/compute-features.cjs --save` en cada ciclo FULL. Strike flip_zone (dom 0.40-0.60) = leading indicator. `dealer_short_puts_support_fragile` = support frágil, prefer breakdown SHORTs.
+
+## L114-L125 (DERIVED FROM BACKTEST OOS — aplicar automáticamente via compute-features.cjs)
+
+**TIER ⭐⭐⭐ (max prioridad):**
+- **L114**: VIX ≥25 = BREAK bias fuerte (+17 a +33pp OOS). Nunca fade barras con VIX alto.
+- **L115**: VIX [15-20] + strike +1-3% arriba del precio = BOUNCE LONG (61% bounce test, N=106).
+- **L121**: flow_strikeShareOfDay 0.1-1% + VIX [15-20] = BREAK RETAIL FUERTE (62% break test, retention 21.74x).
+
+**TIER ⭐⭐ (alta confianza):**
+- **L116**: Tarde + precio ya subió 0.3-1% → BREAK continuation (+22.7pp OOS).
+- **L119**: Strike con 0.1-1% del flow diario = BREAK (+11pp OOS).
+- **L120**: Strike con ≥5% del flow = PIN/FLAT (usar como TP magnético, no directional).
+- **L122**: Trade ≥$1M en strike + VIX cayendo = BOUNCE LONG (smart money bottom).
+
+**TIER ⭐ (contexto):**
+- L117: Morning primera hora = bounce leve (+3.6pp).
+- L118: oiRatio≥0.7 = flat ⚠️ inactiva hasta server extension.
+- L123: Trade $200K-$1M + VIX flat = BREAK.
+- L124: Sin smart money + VIX flat = BREAK retail unchecked.
+- L125: Strike con 1-5% flow + última hora = BREAK late.
+
+**Orden de precedencia cuando activan varias:** L121 > L114 > L115 > L120 > L116 > L119 > L122 > resto.
+
+**Lectura en vivo:** `agent-state.json → dominanceSnapshot` tiene `lessonsActive[]` y `netSignal` por strike. Usar para AJUSTAR conviction y dirección de cada orden.
 
 ## STATISTICAL RULES (from 576 days, 160K candles backtest)
 - VRP < -0.02 = 64% break rate. NUNCA fade gamma bars con VRP negativo fuerte.
