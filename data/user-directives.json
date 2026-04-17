@@ -1,0 +1,31 @@
+{
+  "lastUpdated": "2026-04-11T02:15:16.369Z",
+  "tradingPreferences": [
+    "Operar 24/7 cuando sea posible (overnight con barras gordas)",
+    "US30 debe tener cobertura siempre (mejor CFD estadisticamente)",
+    "XAU importante - $1/pt = alto valor por trade",
+    "No hay limites artificiales de trades, posiciones, ni kill switch",
+    "Cuenta es demo - operar sin miedo, cada trade es data",
+    "Priorizar precision de entrada (gamma bars, no niveles aleatorios)",
+    "Macro events son catalizadores, no amenazas"
+  ],
+  "weeklyGoals": [
+    "Ejecutar /weekly-analysis cada viernes despues del cierre",
+    "Aplicar trade modes (SCALP/INTRADAY/SWING) en cada orden",
+    "Cubrir los 3 CFDs en cada ciclo",
+    "Buscar scalps en congestion",
+    "Pyramid en ganadores confirmados"
+  ],
+  "knownIssues": [
+    "SpotGamma data se congela despues de 4PM ET",
+    "Post-close drift puede sacar SLs sin volumen real",
+    "CONFIRM mode es demasiado restrictivo - usar LEVEL por defecto",
+    "NAS SHORT en very_neg gamma = 40% WR, evitar",
+    "Tape puede ser contrarian - no confiar ciegamente"
+  ],
+  "dataSources": {
+    "spotgamma": "$300/year subscription",
+    "tradier": "Free - GEX per ETF",
+    "futureConsideration": "Polygon.io $30/mo for individual flow"
+  }
+}

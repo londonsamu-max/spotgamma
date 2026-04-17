@@ -1,0 +1,18 @@
+{
+  "gammaFeatureIdx": 0,
+  "squeezeFeatureIdx": 10,
+  "gammaPositiveThreshold": 0.3,
+  "gammaNegativeThreshold": -0.3,
+  "squeezeHighThreshold": 0.5,
+  "regimes": [
+    "meanrev",
+    "momentum",
+    "squeeze"
+  ],
+  "defaultRegime": "meanrev",
+  "priority": [
+    "squeeze",
+    "momentum",
+    "meanrev"
+  ]
+}

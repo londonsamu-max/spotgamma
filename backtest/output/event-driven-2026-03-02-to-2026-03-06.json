@@ -1,0 +1,33 @@
+{
+  "engine": "event-driven-L60",
+  "startDate": "2026-03-02",
+  "endDate": "2026-03-06",
+  "daysProcessed": 5,
+  "totalTrades": 0,
+  "winRate": 0,
+  "netPnlDollars": 0,
+  "startingEquity": 918.78,
+  "endingEquity": 918.78,
+  "maxDrawdown": 0,
+  "maxDrawdownPct": 0,
+  "avgWin": 0,
+  "avgLoss": 0,
+  "pnlByCfd": {
+    "NAS100": 0,
+    "US30": 0,
+    "XAUUSD": 0
+  },
+  "pnlByMode": {
+    "scalp": 0,
+    "intraday": 0,
+    "swing": 0
+  },
+  "pnlByDayOfWeek": {
+    "Mon": 0,
+    "Tue": 0,
+    "Wed": 0,
+    "Thu": 0,
+    "Fri": 0
+  },
+  "trades": []
+}

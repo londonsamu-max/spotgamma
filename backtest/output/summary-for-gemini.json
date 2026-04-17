@@ -1,0 +1,298 @@
+{
+  "overview": {
+    "period": "2025-01-02 -> 2026-04-10",
+    "days": 329,
+    "trades": 495,
+    "winRate": "50.5%",
+    "netPnL": "$540.71",
+    "roi": "58.9%",
+    "maxDrawdown": "$148.76 (16.19%)",
+    "avgWin": "$6.9",
+    "avgLoss": "$-4.83",
+    "profitFactor": "1.46",
+    "largestWin": "$34.57",
+    "largestLoss": "$-16.73",
+    "startEquity": "$918.78",
+    "endEquity": "$1459.49"
+  },
+  "byCfd": {
+    "NAS100": 59.4,
+    "US30": 4.19,
+    "XAUUSD": 477.12
+  },
+  "byMode": {
+    "scalp": 118.41,
+    "intraday": 55.33,
+    "swing": 366.97
+  },
+  "byDayOfWeek": {
+    "Thu": 35.01,
+    "Fri": 338.04,
+    "Mon": -29.06,
+    "Tue": 124.54,
+    "Wed": 72.18
+  },
+  "byDirection": {
+    "LONG": {
+      "wins": 29,
+      "losses": 35,
+      "net": 86.76999999999992
+    },
+    "SHORT": {
+      "wins": 221,
+      "losses": 210,
+      "net": 453.94000000000045
+    }
+  },
+  "byExitReason": {
+    "tp1": {
+      "count": 112,
+      "net": 1459.799999999999
+    },
+    "eod": {
+      "count": 37,
+      "net": 118.11000000000001
+    },
+    "trail": {
+      "count": 111,
+      "net": 126.50000000000011
+    },
+    "sl": {
+      "count": 235,
+      "net": -1163.7000000000003
+    }
+  },
+  "byMonth": {
+    "2025-01": -24.52,
+    "2025-02": -20.03,
+    "2025-03": 62.93,
+    "2025-04": -44.879999999999995,
+    "2025-05": -11.23,
+    "2025-06": -8.57,
+    "2025-07": -62.269999999999996,
+    "2025-08": 34.39,
+    "2025-09": -31.040000000000003,
+    "2025-10": 305.63,
+    "2025-11": 144.67,
+    "2025-12": 184.25,
+    "2026-01": -52.410000000000004,
+    "2026-02": 0,
+    "2026-03": 66.13000000000001,
+    "2026-04": -2.3399999999999994
+  },
+  "maxConsecutiveLosses": 15,
+  "top10Winners": [
+    {
+      "date": "2025-10-02",
+      "cfd": "XAUUSD",
+      "dir": "SHORT",
+      "mode": "swing",
+      "pnl": 34.57,
+      "entry": 3860.709009009009,
+      "exit": 3826.1354954954954,
+      "reason": "tp1"
+    },
+    {
+      "date": "2025-10-31",
+      "cfd": "XAUUSD",
+      "dir": "SHORT",
+      "mode": "scalp",
+      "pnl": 33.46,
+      "entry": 4048.9942541436462,
+      "exit": 4015.531491712707,
+      "reason": "tp1"
+    },
+    {
+      "date": "2025-10-31",
+      "cfd": "XAUUSD",
+      "dir": "SHORT",
+      "mode": "scalp",
+      "pnl": 33.41,
+      "entry": 4043.1982872928174,
+      "exit": 4009.7834254143645,
+      "reason": "tp1"
+    },
+    {
+      "date": "2025-11-18",
+      "cfd": "XAUUSD",
+      "dir": "SHORT",
+      "mode": "scalp",
+      "pnl": 33.36,
+      "entry": 4047.8604958677683,
+      "exit": 4014.4990082644626,
+      "reason": "tp1"
+    },
+    {
+      "date": "2025-11-04",
+      "cfd": "XAUUSD",
+      "dir": "SHORT",
+      "mode": "swing",
+      "pnl": 32.86,
+      "entry": 3976.273922651934,
+      "exit": 3943.412154696133,
+      "reason": "tp1"
+    },
+    {
+      "date": "2025-11-04",
+      "cfd": "XAUUSD",
+      "dir": "SHORT",
+      "mode": "swing",
+      "pnl": 32.79,
+      "entry": 3968.0011325966852,
+      "exit": 3935.20773480663,
+      "reason": "tp1"
+    },
+    {
+      "date": "2025-04-02",
+      "cfd": "NAS100",
+      "dir": "SHORT",
+      "mode": "scalp",
+      "pnl": 25.69,
+      "entry": 19438.147757255938,
+      "exit": 19181.255936675465,
+      "reason": "tp1"
+    },
+    {
+      "date": "2025-10-17",
+      "cfd": "XAUUSD",
+      "dir": "SHORT",
+      "mode": "scalp",
+      "pnl": 24.2,
+      "entry": 4380.641218836566,
+      "exit": 4356.438781163435,
+      "reason": "tp1"
+    },
+    {
+      "date": "2025-10-17",
+      "cfd": "XAUUSD",
+      "dir": "SHORT",
+      "mode": "swing",
+      "pnl": 24.02,
+      "entry": 4347.299113573407,
+      "exit": 4323.280886426593,
+      "reason": "tp1"
+    },
+    {
+      "date": "2025-10-17",
+      "cfd": "XAUUSD",
+      "dir": "SHORT",
+      "mode": "swing",
+      "pnl": 23.98,
+      "entry": 4339.658005540166,
+      "exit": 4315.681994459834,
+      "reason": "tp1"
+    }
+  ],
+  "top10Losers": [
+    {
+      "date": "2025-10-07",
+      "cfd": "XAUUSD",
+      "dir": "SHORT",
+      "mode": "swing",
+      "pnl": -16.73,
+      "entry": 3964.4491394658753,
+      "exit": 3981.1782789317504,
+      "reason": "sl",
+      "maxAdverse": 20.66
+    },
+    {
+      "date": "2025-10-07",
+      "cfd": "XAUUSD",
+      "dir": "SHORT",
+      "mode": "swing",
+      "pnl": -16.71,
+      "entry": 3957.6389910979224,
+      "exit": 3974.3479821958454,
+      "reason": "sl",
+      "maxAdverse": 22.39
+    },
+    {
+      "date": "2025-11-18",
+      "cfd": "XAUUSD",
+      "dir": "SHORT",
+      "mode": "swing",
+      "pnl": -16.09,
+      "entry": 4036.1082093663913,
+      "exit": 4052.1964187327826,
+      "reason": "sl",
+      "maxAdverse": 16.81
+    },
+    {
+      "date": "2025-10-31",
+      "cfd": "XAUUSD",
+      "dir": "SHORT",
+      "mode": "swing",
+      "pnl": -16.07,
+      "entry": 4019.753701657459,
+      "exit": 4035.8274033149173,
+      "reason": "sl",
+      "maxAdverse": 16.53
+    },
+    {
+      "date": "2025-11-18",
+      "cfd": "XAUUSD",
+      "dir": "SHORT",
+      "mode": "swing",
+      "pnl": -16.03,
+      "entry": 4013.4258953168046,
+      "exit": 4029.451790633609,
+      "reason": "sl",
+      "maxAdverse": 29.3
+    },
+    {
+      "date": "2025-10-31",
+      "cfd": "XAUUSD",
+      "dir": "SHORT",
+      "mode": "swing",
+      "pnl": -16.03,
+      "entry": 4002.506187845304,
+      "exit": 4018.5323756906078,
+      "reason": "sl",
+      "maxAdverse": 20.95
+    },
+    {
+      "date": "2025-10-31",
+      "cfd": "XAUUSD",
+      "dir": "SHORT",
+      "mode": "swing",
+      "pnl": -15.99,
+      "entry": 3989.8212430939225,
+      "exit": 4005.812486187845,
+      "reason": "sl",
+      "maxAdverse": 17.49
+    },
+    {
+      "date": "2025-02-24",
+      "cfd": "US30",
+      "dir": "SHORT",
+      "mode": "scalp",
+      "pnl": -11.65,
+      "entry": 43547.7,
+      "exit": 43664.20979020978,
+      "reason": "sl",
+      "maxAdverse": 162.2
+    },
+    {
+      "date": "2025-02-24",
+      "cfd": "US30",
+      "dir": "SHORT",
+      "mode": "scalp",
+      "pnl": -11.64,
+      "entry": 43519.5,
+      "exit": 43635.944055944055,
+      "reason": "sl",
+      "maxAdverse": 120
+    },
+    {
+      "date": "2025-02-24",
+      "cfd": "US30",
+      "dir": "SHORT",
+      "mode": "scalp",
+      "pnl": -11.64,
+      "entry": 43482.5,
+      "exit": 43598.857808857814,
+      "reason": "sl",
+      "maxAdverse": 118.5
+    }
+  ]
+}

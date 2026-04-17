@@ -1,0 +1,179 @@
+{
+  "version": "1.0",
+  "source": "Markets in Profile (Dalton), Visual Guide to Options (Levy), A Random Walk Down Wall Street (Malkiel)",
+  "description": "Standardized entry models derived from professional trading literature. These are not suggestions — they are proven frameworks.",
+
+  "market_structure_assessment": {
+    "step1_determine_regime": {
+      "trending": "Price making higher highs/lows (up) or lower highs/lows (down). Profile elongated. Follow the trend, DO NOT fade.",
+      "bracketing": "Price oscillating between support and resistance. Profile fat/balanced. Fade extremes, buy low sell high within range.",
+      "transitioning": "Market breaking out of bracket. Profile shifting. Most profitable moment — trade the breakout direction."
+    },
+    "step2_open_type": {
+      "open_drive": {
+        "description": "Market opens and aggressively auctions in one direction without looking back. Strongest conviction signal.",
+        "action": "Enter immediately in direction of drive. This is institutional money moving. Do NOT fade.",
+        "sl": "Behind the opening range",
+        "confidence": "highest"
+      },
+      "open_test_drive": {
+        "description": "Market opens, tests one direction briefly, then reverses and drives the opposite way.",
+        "action": "Wait for the test to fail, then enter in the drive direction after confirmation.",
+        "sl": "Beyond the test extreme",
+        "confidence": "high"
+      },
+      "open_rejection_reverse": {
+        "description": "Market opens in one direction, gets rejected at a key level, and reverses.",
+        "action": "Enter after rejection is confirmed (price moves back through opening range).",
+        "sl": "Beyond the rejection high/low",
+        "confidence": "medium-high"
+      },
+      "open_auction": {
+        "description": "Market opens and rotates without conviction. No clear direction.",
+        "action": "WAIT. Do not trade until direction emerges. This is the most common and least tradeable open.",
+        "sl": "N/A - don't trade",
+        "confidence": "low"
+      }
+    }
+  },
+
+  "entry_models": {
+    "model_1_excess_fade": {
+      "name": "Fade Excess at Value Area Extremes",
+      "source": "Markets in Profile Ch.4",
+      "conditions": [
+        "Market in bracketing/balanced regime",
+        "Price reaches Value Area High (VAH) or Value Area Low (VAL)",
+        "Single prints (excess) appear at the extreme — price was rejected",
+        "Volume decreases at the extreme (buyers/sellers drying up)"
+      ],
+      "entry": "Fade the extreme. Short at VAH with excess, Long at VAL with excess.",
+      "sl": "Beyond the excess prints (the absolute high/low of the session)",
+      "tp": "Point of Control (POC) — the price with most volume/time",
+      "gamma_confirmation": "In positive gamma regime, this model is STRONGEST (dealers support mean reversion). In negative gamma, be cautious — excess can be violated.",
+      "spotgamma_signals": ["Price near call wall (short) or put wall (long)", "HIRO reversing at extreme", "Tape sentiment shifting"]
+    },
+
+    "model_2_breakout_follow": {
+      "name": "Bracket Breakout Follow-Through",
+      "source": "Markets in Profile Ch.8",
+      "conditions": [
+        "Market has been in bracket (range) for multiple sessions",
+        "Price breaks above/below the bracket range",
+        "Volume INCREASES on the breakout (new money entering)",
+        "Initial Balance (first hour) is wide — strong early conviction"
+      ],
+      "entry": "Enter in breakout direction after price clears the bracket extreme AND holds for at least 15 minutes.",
+      "sl": "Just inside the broken bracket boundary (if it goes back inside, breakout failed)",
+      "tp": "Measure the bracket range and project it from the breakout point (measured move)",
+      "gamma_confirmation": "In negative gamma, breakouts ACCELERATE (dealers amplify moves). In positive gamma, breakouts tend to fail — be skeptical.",
+      "spotgamma_signals": ["GEX very negative (dealers short gamma)", "Price breaking through gamma flip", "0DTE ratio < 0.7 (no floor)"]
+    },
+
+    "model_3_inventory_correction": {
+      "name": "Short Covering Rally / Long Liquidation Break",
+      "source": "Markets in Profile Ch.8",
+      "conditions": [
+        "Market approaches a previous significant low (for shorts) or high (for longs)",
+        "Multiple time frames are positioned in the same direction (too short or too long)",
+        "Excess forms at the test level — the retest doesn't make a new extreme",
+        "Profile shows p-shape (short covering) or b-shape (long liquidation)"
+      ],
+      "entry": "Enter in the correction direction when excess forms. p-shape = buy. b-shape = sell.",
+      "sl": "Beyond the excess low (p-shape) or excess high (b-shape)",
+      "tp": "Value area of the prior balance area",
+      "gamma_confirmation": "Check institutional positioning (net puts vs net calls at key strikes). If heavy short positioning at support, squeeze is likely.",
+      "spotgamma_signals": ["Large net put positioning at support (short squeeze potential)", "HIRO starting to rise from 30th percentile", "Tape flipping from bearish to neutral"]
+    },
+
+    "model_4_poor_high_low": {
+      "name": "Poor High / Poor Low Retest",
+      "source": "Markets in Profile Ch.4-5",
+      "conditions": [
+        "Previous session left a 'poor high' (no excess, flat top) or 'poor low' (no excess, flat bottom)",
+        "Poor highs/lows indicate unfinished business — the auction will likely revisit",
+        "Current price is approaching the poor high/low area"
+      ],
+      "entry": "When price revisits a poor high/low, watch for either: (a) price punches through and continues = FOLLOW, or (b) excess finally forms = FADE.",
+      "sl": "Depends on which scenario plays out",
+      "tp": "If follow: next structural level. If fade: POC of current range.",
+      "gamma_confirmation": "Poor highs near call wall are especially powerful — dealers and auction structure both resist.",
+      "spotgamma_signals": ["Call wall or put wall at the poor high/low level", "Key gamma strike at the same level"]
+    },
+
+    "model_5_trend_day": {
+      "name": "Trend Day Recognition and Entry",
+      "source": "Markets in Profile Ch.8-9",
+      "conditions": [
+        "Open-Drive or Open-Test-Drive opening type",
+        "Initial Balance (first hour range) is narrow — coiled spring",
+        "Price breaks out of Initial Balance with conviction",
+        "Profile stays elongated — no rotation back to the mean",
+        "Volume increases as the trend progresses"
+      ],
+      "entry": "Enter on the first pullback to the prior period's value area. Or enter on the IB breakout with a market order.",
+      "sl": "Below the IB low (uptrend) or above the IB high (downtrend). On trend days, if price comes back to IB, the trend is likely over.",
+      "tp": "Let it run. Trail stop using each new period's low (uptrend) or high (downtrend). Trend days can move 2-3x normal range.",
+      "gamma_confirmation": "Negative gamma + trend day = monster move. Dealers are FORCED to hedge in the same direction, amplifying everything.",
+      "spotgamma_signals": ["Very negative gamma regime", "GEX change: bias shifted", "0DTE ratio extreme (>2 or <0.5)", "HIRO accelerating in trend direction (>70th or <30th percentile)"]
+    },
+
+    "model_6_gap_fill": {
+      "name": "Gap Fill / Gap and Go",
+      "source": "Markets in Profile + Options (Levy)",
+      "conditions_fill": [
+        "Market gaps open above/below prior close",
+        "Positive gamma regime (mean reversion environment)",
+        "Gap is within implied move range (not an outlier event)",
+        "Volume is LOW on the gap — no new conviction"
+      ],
+      "conditions_go": [
+        "Market gaps open and does NOT fill within first 30 minutes",
+        "Negative gamma regime (momentum environment)",
+        "Gap exceeds implied move range (paradigm shift)",
+        "Volume is HIGH — institutional repositioning"
+      ],
+      "entry_fill": "Fade the gap. Short if gap up, Long if gap down. Wait for first 15min to confirm no follow-through.",
+      "entry_go": "Follow the gap. Enter in gap direction if price holds above/below gap edge for 30min.",
+      "sl_fill": "Above gap high (fading gap up) or below gap low (fading gap down)",
+      "sl_go": "At the gap fill level (if it fills, thesis is wrong)",
+      "spotgamma_signals": ["Gamma regime determines fill vs go", "VRP positive = fill likely. VRP negative = go likely.", "Implied move percentage as gap size reference"]
+    },
+
+    "model_7_vanna_flow": {
+      "name": "Vanna Flow Trade (VIX-driven)",
+      "source": "Options structure (Levy) + SpotGamma",
+      "conditions_bearish_indices": [
+        "VIX rising sharply (>5% intraday)",
+        "Index vanna active = dealers selling to hedge",
+        "UVIX rising faster than VIX (convexity bid)",
+        "SPX/NAS tape turning bearish (bull% < 40%)"
+      ],
+      "conditions_bullish_gold": [
+        "VIX spiking + UVIX-GLD divergence signal = buy_gold",
+        "Refuge flow active",
+        "GLD positive gamma (supports mean reversion to upside)",
+        "DXY weakening (dollar down = gold up)"
+      ],
+      "entry_short_indices": "Short NAS100 or US30 when VIX confirms acceleration + tape bearish + HIRO dropping below 30th pctile.",
+      "entry_long_gold": "Long XAUUSD when refuge flow activates + UVIX-GLD buy signal + GLD holding above put wall.",
+      "sl": "Use gamma levels: SL above call wall (shorts) or below put wall (longs)",
+      "spotgamma_signals": ["VIX level + change", "UVIX-GLD divergence", "Refuge flow flag", "DXY direction"]
+    }
+  },
+
+  "position_management": {
+    "breakeven_rule": "Move SL to breakeven when price reaches 1R (1x your risk distance) in your favor.",
+    "partial_take": "Take 50% profit at first structural target (POC, value area edge, or TP1). Let rest run with trailed SL.",
+    "trail_method": "Trail SL using structural levels: each new period's value area low (longs) or high (shorts). Not arbitrary distances.",
+    "cut_rule": "Close immediately if: (1) gamma regime flips while in trade, (2) HIRO reverses >20 percentile points against you, (3) open type next session contradicts your position.",
+    "add_rule": "Add to position ONLY if: (1) price pulls back to value and holds, (2) new excess forms confirming your direction, (3) volume supports continuation."
+  },
+
+  "risk_rules": {
+    "max_risk_per_trade": "2% of account (with $972 account = $19.44 max loss per trade)",
+    "max_daily_loss": "5% of account ($48.60). If hit, stop trading for the day.",
+    "position_sizing": "Calculate: volume = max_risk / (SL_distance_points × value_per_point). Round down to nearest 0.01 lots.",
+    "correlation_limit": "If long NAS100, don't also long US30 (correlated ~85%). Diversify across uncorrelated CFDs."
+  }
+}

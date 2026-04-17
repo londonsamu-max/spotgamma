@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+.sg_token
+.manus-logs/
+*.log
+.tmp-*
+**/.tmp-*/
+data/_cycle_*.json
+# 21GB of historical backtest data — too big for GitHub (limit 100MB/file, 5GB/repo)
+data/historical/
+# Large rolling datasets
+data/market-snapshots-rolling.json

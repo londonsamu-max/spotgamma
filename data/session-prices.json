@@ -1,0 +1,42 @@
+{
+  "date": "2026-04-17",
+  "assets": {
+    "SPX": {
+      "openPrice": 0,
+      "prevClose": 6535.549999999999,
+      "sessionHigh": 0,
+      "sessionLow": null,
+      "openSet": false
+    },
+    "DIA": {
+      "openPrice": 0,
+      "prevClose": 462.32,
+      "sessionHigh": 0,
+      "sessionLow": null,
+      "openSet": false
+    },
+    "GLD": {
+      "openPrice": 0,
+      "prevClose": 229.24200000000002,
+      "sessionHigh": 0,
+      "sessionLow": null,
+      "openSet": false
+    },
+    "XAUUSD": {
+      "openPrice": 0,
+      "prevClose": 4653.945,
+      "sessionHigh": 0,
+      "sessionLow": null,
+      "openSet": false
+    },
+    "QQQ": {
+      "openPrice": 0,
+      "prevClose": 573.79,
+      "sessionHigh": 0,
+      "sessionLow": null,
+      "openSet": false
+    }
+  },
+  "dxy": 0,
+  "tlt": 0
+}

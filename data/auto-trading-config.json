@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "confidenceThreshold": 0,
+  "maxDailyTrades": 999,
+  "maxConcurrentPositions": 999,
+  "killSwitchEnabled": false,
+  "killSwitchLookback": 10,
+  "killSwitchMinWR": 30,
+  "killSwitchTriggered": false,
+  "killSwitchTriggeredAt": null,
+  "volumes": {
+    "NAS100": 0.1,
+    "US30": 0.1,
+    "XAUUSD": 0.01
+  },
+  "disabledCFDs": []
+}

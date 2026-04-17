@@ -1,0 +1,41 @@
+{
+  "cycle": "C1759",
+  "ts": "2026-04-17T00:48:47.884Z",
+  "market_structure": {
+    "NAS100": "congestion",
+    "US30": "at_gammaflip",
+    "XAUUSD": "markup_pullback"
+  },
+  "gamma_context": {
+    "NAS100": "NAS 26341. Floor SPX7035 +2465M @26297 (-44). Ceiling callWall SPX7100 @26540 (+199). Overnight L76 active.",
+    "US30": "US30 48642 EXACTLY at gammaFlip 48642. Above=LONG DIA488 callWall @48821. Below=SHORT to DIA480 @48021.",
+    "XAUUSD": "XAU 4799.79. Gamma void 4790-4810. GLD437 (4771/-29) GLD438 (4782/-18) below threshold for overnight. GLD450 +81M @4913."
+  },
+  "hiro": {
+    "SPX": "P31",
+    "QQQ": "P32",
+    "SPY": "P65",
+    "DIA": "P49",
+    "GLD": "P39"
+  },
+  "execution": {
+    "pending_orders": 12,
+    "open_positions": 0,
+    "balance": 940.81,
+    "equity": 940.81,
+    "realized_today": 0
+  },
+  "intentions": [
+    "Overnight evening Colombia 19:45. Markets closed. Prices flat vs C1758 (<10pts all CFDs).",
+    "12 orders from C1758 remain valid — all 3 CFDs covered, no churn.",
+    "SPX hiro deteriorated P39→P31 (more bearish). SHORT bias reinforced.",
+    "XAU gamma void — no fat bars within $5. Existing orders at GLD437/438/445/450 flank price.",
+    "FOMC Waller in 17.3h (Medium impact). Pre-Waller noise expected."
+  ],
+  "thesis": {
+    "NAS100": "Congestion 26297-26540. SPX P31 + QQQ P32 bearish vs SPY P65. SHORT 7040/7100, LONG 7010/6865.",
+    "US30": "AT gammaFlip 48642 exactly. LONG DIA488 above, SHORT breakdown below.",
+    "XAUUSD": "Pullback within markup. Gamma void near price. Overnight L76: only GLD450 (+81M) qualifies."
+  },
+  "key_flow": "GLD455 $417K call buying dominant inst. SPY690 puts $104K bearish. QQQ700 calls $52K. SPX roll: bull (6900 $70K) vs bear (6400 $27K)."
+}

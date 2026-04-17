@@ -1,0 +1,11 @@
+{
+  "runs": [
+    {
+      "date": "2026-04-07T05:00:01.648944",
+      "skipped": true,
+      "reason": "solo 0 episodios nuevos (min=10)",
+      "total_eps": 0
+    }
+  ],
+  "last_episode_count": 0
+}

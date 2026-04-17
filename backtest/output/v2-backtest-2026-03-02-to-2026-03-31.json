@@ -1,0 +1,417 @@
+{
+  "startDate": "2026-03-02",
+  "endDate": "2026-03-31",
+  "daysProcessed": 22,
+  "breakerDays": 0,
+  "totalTrades": 14,
+  "winRate": 85.7,
+  "netPnlDollars": 83.97,
+  "pnlByCfd": {
+    "NAS100": 83.97,
+    "US30": 0,
+    "XAUUSD": 0
+  },
+  "pnlByMode": {
+    "scalp": 0,
+    "intraday": 23.13,
+    "swing": 60.84
+  },
+  "pnlByDayOfWeek": {
+    "Mon": 0,
+    "Tue": 0,
+    "Wed": 0.5,
+    "Thu": -5.51,
+    "Fri": 88.98
+  },
+  "pnlByMonth": {
+    "2026-03": 83.97
+  },
+  "avgWin": 8.06,
+  "avgLoss": -6.38,
+  "largestWin": 22.24,
+  "largestLoss": -7.76,
+  "maxDrawdown": 6.01,
+  "maxDrawdownPct": 0.65,
+  "startingEquity": 918.78,
+  "endingEquity": 1002.75,
+  "scenarioAnalysis": {
+    "byAxis": {
+      "byRegime": {
+        "positive": {
+          "count": 9,
+          "netPnl": 89.48,
+          "wins": 8,
+          "winRate": 88.9,
+          "avgPnl": 9.94
+        },
+        "very_positive": {
+          "count": 4,
+          "netPnl": -6.01,
+          "wins": 3,
+          "winRate": 75,
+          "avgPnl": -1.5
+        },
+        "neutral": {
+          "count": 1,
+          "netPnl": 0.5,
+          "wins": 1,
+          "winRate": 100,
+          "avgPnl": 0.5
+        }
+      },
+      "byVrp": {
+        "positive": {
+          "count": 14,
+          "netPnl": 83.97,
+          "wins": 12,
+          "winRate": 85.7,
+          "avgPnl": 6
+        }
+      },
+      "byVix": {
+        "high": {
+          "count": 14,
+          "netPnl": 83.97,
+          "wins": 12,
+          "winRate": 85.7,
+          "avgPnl": 6
+        }
+      },
+      "byDxy": {
+        "up": {
+          "count": 2,
+          "netPnl": 1,
+          "wins": 2,
+          "winRate": 100,
+          "avgPnl": 0.5
+        },
+        "down": {
+          "count": 12,
+          "netPnl": 82.97,
+          "wins": 10,
+          "winRate": 83.3,
+          "avgPnl": 6.91
+        }
+      },
+      "byStructure": {
+        "markdown": {
+          "count": 11,
+          "netPnl": 72.15,
+          "wins": 9,
+          "winRate": 81.8,
+          "avgPnl": 6.56
+        },
+        "rotation_day": {
+          "count": 3,
+          "netPnl": 11.82,
+          "wins": 3,
+          "winRate": 100,
+          "avgPnl": 3.94
+        }
+      },
+      "byBarSize": {
+        "small": {
+          "count": 5,
+          "netPnl": -5.51,
+          "wins": 4,
+          "winRate": 80,
+          "avgPnl": -1.1
+        },
+        "medium": {
+          "count": 8,
+          "netPnl": 88.98,
+          "wins": 7,
+          "winRate": 87.5,
+          "avgPnl": 11.12
+        },
+        "large": {
+          "count": 1,
+          "netPnl": 0.5,
+          "wins": 1,
+          "winRate": 100,
+          "avgPnl": 0.5
+        }
+      },
+      "byIvRank": {
+        "low": {
+          "count": 5,
+          "netPnl": -5.51,
+          "wins": 4,
+          "winRate": 80,
+          "avgPnl": -1.1
+        },
+        "mid": {
+          "count": 9,
+          "netPnl": 89.48,
+          "wins": 8,
+          "winRate": 88.9,
+          "avgPnl": 9.94
+        }
+      }
+    },
+    "top25Scenarios": [
+      {
+        "scenario": "NAS100|SHORT|swing|regime=positive|vrp=positive|vix=high|dxy=down|struct=markdown|bar=medium|iv=mid|dow=Fri",
+        "count": 3,
+        "netPnl": 66.35,
+        "winRate": 100,
+        "avgPnl": 22.12
+      },
+      {
+        "scenario": "NAS100|SHORT|intraday|regime=positive|vrp=positive|vix=high|dxy=down|struct=markdown|bar=medium|iv=mid|dow=Fri",
+        "count": 3,
+        "netPnl": 11.56,
+        "winRate": 66.7,
+        "avgPnl": 3.85
+      },
+      {
+        "scenario": "NAS100|SHORT|intraday|regime=positive|vrp=positive|vix=high|dxy=down|struct=rotation_day|bar=medium|iv=mid|dow=Fri",
+        "count": 2,
+        "netPnl": 11.07,
+        "winRate": 100,
+        "avgPnl": 5.54
+      },
+      {
+        "scenario": "NAS100|SHORT|swing|regime=very_positive|vrp=positive|vix=high|dxy=down|struct=rotation_day|bar=small|iv=low|dow=Thu",
+        "count": 1,
+        "netPnl": 0.75,
+        "winRate": 100,
+        "avgPnl": 0.75
+      },
+      {
+        "scenario": "NAS100|SHORT|intraday|regime=positive|vrp=positive|vix=high|dxy=up|struct=markdown|bar=small|iv=low|dow=Wed",
+        "count": 1,
+        "netPnl": 0.5,
+        "winRate": 100,
+        "avgPnl": 0.5
+      },
+      {
+        "scenario": "NAS100|SHORT|swing|regime=neutral|vrp=positive|vix=high|dxy=up|struct=markdown|bar=large|iv=mid|dow=Thu",
+        "count": 1,
+        "netPnl": 0.5,
+        "winRate": 100,
+        "avgPnl": 0.5
+      },
+      {
+        "scenario": "NAS100|SHORT|swing|regime=very_positive|vrp=positive|vix=high|dxy=down|struct=markdown|bar=small|iv=low|dow=Thu",
+        "count": 3,
+        "netPnl": -6.76,
+        "winRate": 66.7,
+        "avgPnl": -2.25
+      }
+    ],
+    "bottom15Scenarios": [
+      {
+        "scenario": "NAS100|SHORT|swing|regime=very_positive|vrp=positive|vix=high|dxy=down|struct=markdown|bar=small|iv=low|dow=Thu",
+        "count": 3,
+        "netPnl": -6.76,
+        "winRate": 66.7,
+        "avgPnl": -2.25
+      },
+      {
+        "scenario": "NAS100|SHORT|intraday|regime=positive|vrp=positive|vix=high|dxy=up|struct=markdown|bar=small|iv=low|dow=Wed",
+        "count": 1,
+        "netPnl": 0.5,
+        "winRate": 100,
+        "avgPnl": 0.5
+      },
+      {
+        "scenario": "NAS100|SHORT|swing|regime=neutral|vrp=positive|vix=high|dxy=up|struct=markdown|bar=large|iv=mid|dow=Thu",
+        "count": 1,
+        "netPnl": 0.5,
+        "winRate": 100,
+        "avgPnl": 0.5
+      },
+      {
+        "scenario": "NAS100|SHORT|swing|regime=very_positive|vrp=positive|vix=high|dxy=down|struct=rotation_day|bar=small|iv=low|dow=Thu",
+        "count": 1,
+        "netPnl": 0.75,
+        "winRate": 100,
+        "avgPnl": 0.75
+      },
+      {
+        "scenario": "NAS100|SHORT|intraday|regime=positive|vrp=positive|vix=high|dxy=down|struct=rotation_day|bar=medium|iv=mid|dow=Fri",
+        "count": 2,
+        "netPnl": 11.07,
+        "winRate": 100,
+        "avgPnl": 5.54
+      },
+      {
+        "scenario": "NAS100|SHORT|intraday|regime=positive|vrp=positive|vix=high|dxy=down|struct=markdown|bar=medium|iv=mid|dow=Fri",
+        "count": 3,
+        "netPnl": 11.56,
+        "winRate": 66.7,
+        "avgPnl": 3.85
+      },
+      {
+        "scenario": "NAS100|SHORT|swing|regime=positive|vrp=positive|vix=high|dxy=down|struct=markdown|bar=medium|iv=mid|dow=Fri",
+        "count": 3,
+        "netPnl": 66.35,
+        "winRate": 100,
+        "avgPnl": 22.12
+      }
+    ]
+  },
+  "daysSample": [
+    {
+      "date": "2026-03-04",
+      "pnl": 0,
+      "trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-05",
+      "pnl": 0,
+      "trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-06",
+      "pnl": 0,
+      "trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-09",
+      "pnl": 0,
+      "trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-10",
+      "pnl": 0,
+      "trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-11",
+      "pnl": 0,
+      "trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-12",
+      "pnl": 0,
+      "trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-13",
+      "pnl": 0,
+      "trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-16",
+      "pnl": 0,
+      "trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-17",
+      "pnl": 0,
+      "trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-18",
+      "pnl": 0.5,
+      "trades": 1,
+      "wins": 1,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-19",
+      "pnl": -6.01,
+      "trades": 4,
+      "wins": 3,
+      "losses": 1,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-20",
+      "pnl": 88.98,
+      "trades": 8,
+      "wins": 7,
+      "losses": 1,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-23",
+      "pnl": 0,
+      "trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-24",
+      "pnl": 0,
+      "trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-25",
+      "pnl": 0,
+      "trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-26",
+      "pnl": 0.5,
+      "trades": 1,
+      "wins": 1,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-27",
+      "pnl": 0,
+      "trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-30",
+      "pnl": 0,
+      "trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breaker": false
+    },
+    {
+      "date": "2026-03-31",
+      "pnl": 0,
+      "trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breaker": false
+    }
+  ]
+}

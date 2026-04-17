@@ -1,0 +1,1005 @@
+{
+  "lastCycle": "2026-04-17T00:48:47.884Z",
+  "cycleNumber": "C1759",
+  "thesis": {
+    "NAS100": "Congestion 26297-26540. SPX P31 + QQQ P32 bearish vs SPY P65. SHORT 7040/7100, LONG 7010/6865.",
+    "US30": "AT gammaFlip 48642 exactly. LONG DIA488 above, SHORT breakdown below.",
+    "XAUUSD": "Pullback within markup. Gamma void near price. Overnight L76: only GLD450 (+81M) qualifies."
+  },
+  "positions": {},
+  "performance": {
+    "accountBalance": 917.48,
+    "accountEquity": 912.58,
+    "openPositions": 1,
+    "dayPnL": -0.67,
+    "realizedToday": 5.73
+  },
+  "lessons": {
+    "L1": "VRP negative = momentum regime, do NOT fade",
+    "L2": "Don't trade gamma flip pins without directional confirmation (UNLESS flow strongly confirms: HIRO + tape + VRP aligned)",
+    "L3": "SPX/NAS100 negative gamma = 66.7% bullish bounce historically",
+    "L4": "QQQ high P/C may be hedges not directional",
+    "L5": "GLD positive gamma base rate UP but flow+VRP can override",
+    "L6": "SPX VRP POSITIVE = mean-reversion = support bounces",
+    "L7": "QQQ VRP POSITIVE = mean-reversion = bearish P/C is insurance",
+    "L8": "0DTE maxGexStrike = magnetic target (use as TP1 in neg gamma)",
+    "L9": "SPX contango + VRP positive = high mean-reversion probability",
+    "L10": "QQQ IV LOW + contango = cheap puts = insurance not panic",
+    "L11": "Top gamma strikes with large net positions = gravitational zones",
+    "L12": "Gamma cliffs = avoid trading inside",
+    "L13": "GLD tradierGex resistance levels = TP targets",
+    "L14": "QQQ put wall 575-580 = institutional hedge floor",
+    "L16": "VRP overrides gammaRegime label",
+    "L17": "US30 positive gamma = pin tendency. Low conviction.",
+    "L18": "VIX extreme backwardation = violent moves. Size down.",
+    "L19": "XAUUSD outcomes near coin-flip. Directional signals are the edge.",
+    "L20": "NAS100 very_negative gamma = extreme amplification",
+    "L25": "very_negative gamma = do not size up",
+    "L29": "Don't chase moves that already happened",
+    "L30": "SPX HIRO deterioration = downgrade NAS thesis immediately",
+    "L33": "Verify broker accepts orders before assuming market open",
+    "L36": "SL without structural basis = gets hit randomly. Always use gamma level as SL anchor.",
+    "L37": "Never leave pending orders with stale data. Cancel all before open.",
+    "L39": "When price approaches resistance + HIRO/tape bearish = SHORT, not LONG",
+    "L40": "Tape swings violently intraday. Don't base entries on tape alone.",
+    "L41": "Post-macro moves can reverse completely in 10 min",
+    "L42": "Gamma flip CAN be traded if HIRO+tape+VRP all aligned",
+    "L43": "GAMMA BARS are the key to entry precision. Enter at the fattest bars, not random levels.",
+    "L44": "QQQ and SPY gamma bars MUST be checked alongside SPX. They add massive negative gamma that SPX alone doesn't show.",
+    "L45": "Multi-symbol gamma bars reveal the REAL support/resistance map.",
+    "L46": "Executor: breakeven ONLY at 1R, never tighten SL closer without structural reason.",
+    "L47": "Market hours: 510-900 min Colombia time (9:30AM-4PM ET).",
+    "L48": "Minimum R:R 1:1.5. 1:2 preferred but 1:1.5 acceptable. 600 cycles 0 fills = too conservative.",
+    "L49": "Three entry modes: zone (wide), level (tight ±8pts), confirm (micro-candle rejection).",
+    "L50": "LONG+SHORT on same asset = valid hedge if both structural.",
+    "L51": "Trust HIRO over tape for direction. Tape can be retail noise.",
+    "L52": "Read INDIVIDUAL TRADES per instrument, not aggregated tape scores.",
+    "L53": "Classify by size: Institutional >$50K (trust), Medium $10-50K, Retail <$10K (often wrong).",
+    "L54": "Classify by expiry: 0DTE=timing, Weekly=conviction, Monthly=structural, LEAPS=thesis.",
+    "L55": "VIX selling vol = range-bound. Buying puts = VIX drops = bullish. Buying calls = crash protection.",
+    "L56": "SPX call/put spreads = institutional price targets.",
+    "L57": "Per-instrument strike flow = where the battle is.",
+    "L58": "LEVEL-TO-LEVEL: price travels between fat gamma bars. Vacuum between = fast move.",
+    "L59": "TP = next fat gamma bar in trade direction.",
+    "L60": "BOUNCE vs BREAK scoring at each fat bar.",
+    "L61": "Net delta at a strike = pressure direction on that level.",
+    "L62": "Opening orders = growing conviction. Closing = weakening level.",
+    "L63": "Flow pressure can exceed gamma absorption = level breaks.",
+    "L64": "Capture ALL orders. Retail mass = crowd sentiment signal.",
+    "L65": "ISM spike hit -1,111M bar and rejected. Level-to-level confirmed.",
+    "L66": "Enter at the WALL, not 40pts above it.",
+    "L67": "Macro spikes hit gamma bars and reject. Entry = reversal at bar.",
+    "L68": "Always have US30 orders ready. DIA bars exist.",
+    "L69": "Congestion between close bars (20pts) = DO NOT ENTER.",
+    "L70": "Executor: gamma-trail wins over breakeven if more protective.",
+    "L71": "Executor: need manualSL flag for manual SL changes.",
+    "L72": "Executor: duplicate guard must check CFD+direction not just order ID.",
+    "L73": "19 fills for 6 trades = 3x duplication. Executor needs fixes.",
+    "L74": "ALWAYS have orders ready. Never leave book empty if valid setups exist.",
+    "L75": "NEVER LONG+SHORT at same exactLevel. Executor fills both.",
+    "L76": "OVERNIGHT ALLOWED with strict rules: ONLY fat bars (>1000M NAS, >30M GLD, >20M DIA). Wider SL (25pts NAS/US30, 8pts XAU). CONFIRM mode only (no breakouts without flow). Lower conviction. XAUUSD priority (active in Asia/Europe). Previous loss -$41.44 was from small bars + tight SL, not because levels were invalid. Gamma bars ARE valid overnight because options positions dont change.",
+    "L77": "Conversion ratios shift every cycle. ALWAYS read current gammaBars.",
+    "L78": "Every cycle: data freshness → gamma bars → scenarios → validate orders → flow.",
+    "L79": "Pre-market and pre-macro ARE valid with fresh data.",
+    "L80": "Accelerator bars: use LEVEL mode, not confirm (price flies through).",
+    "L81": "UPDATE levels before market open with fresh gamma bars.",
+    "L82": "In freefall: SHORT orders BELOW price at accelerators, LEVEL mode.",
+    "L83": "LEVEL mode by default ALL entries. CONFIRM only for counter-trend reversals at extreme HIRO. Price touching gamma bar IS the setup.",
+    "L84": "FULL 14-point cycle every 5 min during market hours.",
+    "L85": "Every cycle: WHERE are institutions positioning? Which strikes? Which expiry?",
+    "L86": "Show conversion ratios and level shifts each cycle. Update orders if >20pts shift.",
+    "L87": "SpotGamma vs MT5 price diff ~25pts NAS. Executor uses MT5 prices.",
+    "L88": "Price diff is unstable. Use SpotGamma levels directly, executor tolerance handles small diffs.",
+    "L89": "Report gamma bars in ETF strike prices, not converted CFD.",
+    "L90": "XAU: only enter at FAT bars (>+30M). Small bars dont hold.",
+    "L91": "VRP overrides direction for XAU. Negative VRP = dont go LONG.",
+    "L92": "SPX/QQQ HIRO divergence = sector rotation, not broad crash.",
+    "L93": "Power hour HIRO improvements can be fake-outs.",
+    "L94": "VIX call spread $14M = range bet = controlled volatility for weeks.",
+    "L95": "GLD HIRO crash can be from single massive trade. Cross-reference with trade list.",
+    "L96": "triggerSymbol MUST match gamma bar's native ETF. NAS100: SPX/SPY/QQQ. XAUUSD: GLD. US30: DIA. Never default all to SPX.",
+    "L97": "NEVER be static with orders. Every cycle MUST seek NEW entries near current price, not just validate old orders. If nearest order is >100pts from price, MUST find intermediate gamma bars and place new orders. Old orders stay PLUS new ones. Apr 9: 0 trades in 240 cycles because agent held 4 stale orders 130-840pts away while price moved 116pts in a zone with fat bars (SPX $6,800 +1,582M was 73pts from price).",
+    "L98": "US30 gammaBars now use DIA-only bars. Fixed: endpoint was returning SPX bars converted to US30 (DIA gamma too small to make combined top 20). Now gammaBarSyms=[\"DIA\"] for US30.",
+    "L99": "ALL DATA CHANGES DURING THE SESSION — NOT JUST BARS. Update EVERYTHING every cycle. STALE DATA = MISSED TRADES.",
+    "L100": "VALIDATE AND ADAPT ORDERS WITH LIVE DATA. When price approaches an order → score L60 bounce vs break: HIRO + tape + flow + VRP + gamma sign. If data says BOUNCE → keep LONG/SHORT for bounce. If data says BREAK → FLIP the order direction (LONG→SHORT or SHORT→LONG) at the SAME level. The gamma bar tells WHERE. The live data tells WHICH DIRECTION. Example: LONG bounce at SPX$6820 but HIRO bearish + tape -100 + flow selling = FLIP to SHORT breakdown at $6820. Don't cancel — ADAPT.",
+    "L101": "LOWER BAR THRESHOLDS: NAS >300M, US30 >5M, XAU >3M. SPY$679(+617M) bounced 10+ times but was ignored. Any bar price reacts to is valid.",
+    "L102": "MANDATORY PROXIMITY: 1 order within 50pts NAS, $5 XAU, 150pts US30 AT ALL TIMES. Apr 9: 152pts nearest in 116pt range = 0 fills.",
+    "L103": "HIRO EXTREME = IMMEDIATE ORDERS. <P10 or >P90 = place orders within 1 cycle. DIA P3 ignored 3h while US30 crashed 376pts.",
+    "L104": "EQUAL CFD COVERAGE ALL 3 ALWAYS. US30 missed $101, XAU missed $121 because 85% NAS focused. Zero-coverage = critical failure.",
+    "L105": "CONGESTION BOUNDARIES GET ORDERS. LONG at bottom + SHORT at top. Apr 9: 25000-25080 congestion, 0 orders inside = missed +$16.",
+    "L106": "BREAKEVEN SL = ENTRY + 5pts BUFFER NAS/US30, +2pts XAU. Trade 7 stopped 2.4pts below entry then went +207pts.",
+    "L107": "TRADE MODE = STRUCTURAL DECISION. SCALP for congestion. INTRADAY for normal moves. SWING for multi-day with LEAPS/monthly flow or HIRO extreme.",
+    "L108": "PYRAMID = ADD when move CONFIRMS. Only in profit. Same volume. Max: SCALP 0, INTRADAY 2, SWING 3.",
+    "L109": "AUTO-CLASSIFY MODE: 0DTE=SCALP, weekly=INTRADAY, monthly/LEAPS=SWING. Bar separation <30pts=SCALP, >100pts=SWING.",
+    "L110": "CLASSIFY MARKET STRUCTURE per CFD every cycle: accumulation, distribution, markup, markdown, congestion, squeeze, trend day, rotation day. Structure determines tradeMode and strategy.",
+    "L111": "CONFLICT PRIORITY: Stats(N>200) > single lessons. L76 overnight > L83 LEVEL. Freefall > congestion LONGs. Flow > gamma = BREAK. Per-CFD HIRO for direction. Power hour HIRO unreliable.",
+    "L112": "TRADE MODE UPGRADE: SCALP→INTRADAY→SWING. Never downgrade. Upgrade when pyramid signals fire or HIRO goes extreme.",
+    "L113": "PRE-MARKET STOP HUNT: SPX broke 6780 overnight congestion, hit SL at 24996 (+35pts from entry), then immediately retraced to 6778. If SL was 5pts wider (25001), position would be +26pts. Lesson: overnight SL near congestion breakout level gets hunted. Use wider SL for overnight holds near resistance (L76 wider SL rule was 25pts, but actual SL was 35pts which was still too tight for a pre-market spike).",
+    "L114": "Do NOT fight the tape. HIRO SPX P38-P40 = NEUTRAL, not bearish. Only SHORT NAS when SPX HIRO <P20 (extreme) OR price confirms with lower highs. P38 + price making higher highs = NO SHORT. DIA P2 extreme is for US30, not NAS — dont use wrong CFD signal. 2 SL hits -.90 from shorting NAS with neutral HIRO into a rally.",
+    "L115": "US30 minimum SL distance on Pepperstone: SL at 47508 with entry 47499 (9pts) caused Invalid stops error (retcode 10016). US30 needs wider SL — at least 20pts minimum. The order filled but SL was rejected, position likely closed immediately at small loss.",
+    "L116": "GLD 433 bounced +.43 (4 XAU) pero CONFIRM mode no capturo el bounce porque fue instantaneo. Cuando HIRO es fuerte (>P70 o <P30) y precio toca gamma bar en la MISMA direccion del HIRO, usar LEVEL mode no CONFIRM — el bounce es rapido y no forma wick. CONFIRM solo para contra-trend (LONG contra HIRO bearish, SHORT contra HIRO bullish).",
+    "L117": "VALIDATE before entry: Having orders in both directions is good BUT analyze price action IN THAT MOMENT before letting them fill. If DIA makes higher highs (475→477), cancel SHORT orders even if HIRO P2 bearish. HIRO is direction, not timing. Price action is timing. Combine: HIRO for direction + price action for timing + gamma bar for level.",
+    "L118": "DIA HIRO was P2 Friday but P63 Monday — ALWAYS verify HIRO is fresh before trading. The overnight DIA P2 extreme was stale data. Fresh Monday HIRO showed P63 neutral-bullish. Close immediately when HIRO flips against thesis."
+  },
+  "tradingRules": {
+    "minRR": "1:1.5 minimum on TP1. 1:2 preferred but not required.",
+    "entryPrecision": "Enter at ANY gamma bar with structural basis. Not just fattest — bars >500M NAS, >20M GLD, >10M DIA are valid.",
+    "entryMode": "LEVEL mode by default for ALL entries. CONFIRM mode ONLY for counter-trend reversals at extreme HIRO levels.",
+    "SL_placement": "SL behind next structural gamma bar + buffer (15pts NAS/US30, 5pts XAU).",
+    "multiSymbol": "ALWAYS check SPX + QQQ + SPY gamma bars together for NAS100 entries.",
+    "noArtificialLimits": "No max trades, no max positions, no max orders, no kill switch. Data manda. Place as many orders as the data justifies.",
+    "positionValidation": "Every cycle validate ALL open positions against live data. Close if thesis invalidated.",
+    "flowAnalysis": "EVERY cycle must analyze individual trades PER INSTRUMENT.",
+    "tpPlacement": "TP = next gamma bar after entry level.",
+    "bounceVsBreak": "Score: HIRO + institutional flow + tape + VRP + gamma sign + candle. Majority wins.",
+    "alwaysSeekSetups": "Every cycle, identify ALL gamma bars near price and place orders at EVERY valid level. More orders = more chances. NEVER be passive. If price is oscillating in a range, have orders at BOTH ends.",
+    "breakoutOrders": "Place LEVEL mode orders at RED bars for breakouts. If price breaks a RED bar → enters vacuum → fast move to next bar.",
+    "adaptEveryFetch": "When gamma bars shift with new flow data, UPDATE orders immediately. Don't hold stale orders.",
+    "conversionCheck": "ALWAYS use current getAgentView gammaBars. Never hardcode levels.",
+    "sessionOnly": "Overnight ALLOWED at fat bars only (>1000M NAS, >30M GLD). Wider SL. Pre-market 7AM+ full analysis with fresh data.",
+    "preMarketUpdate": "Before market open: fresh data → new gamma bars → update orders → cancel stale.",
+    "fullCycleAlways": "EVERY cron cycle = FULL 14-point checklist during market hours. Brief monitoring off-hours.",
+    "reportInETF": "Report gamma bar levels as ETF strikes, not CFD.",
+    "unlimitedOrders": "Place as many orders as the data supports. 8-15 orders active is normal. Cover the full range of likely price movement.",
+    "barThresholds": {
+      "NAS100": "300M",
+      "US30": "5M",
+      "XAUUSD": "3M"
+    },
+    "overnightBarThresholds": {
+      "NAS100": "1000M",
+      "US30": "30M",
+      "XAUUSD": "30M"
+    },
+    "proximityMax": {
+      "NAS100": "50pts",
+      "US30": "150pts",
+      "XAUUSD": "$5"
+    },
+    "breakevenBuffer": {
+      "NAS100": "5pts",
+      "US30": "5pts",
+      "XAUUSD": "2pts"
+    },
+    "hiro_extreme_threshold": "P10/P90 = immediate orders",
+    "cfd_coverage": "ALL 3 CFDs every cycle mandatory"
+  },
+  "systemFixes": {
+    "marketHours": "Fixed: 510-900 min Colombia (9:30AM-4PM ET)",
+    "executorModes": "zone/level/confirm entry modes with micro-candle rejection",
+    "executorSLProtection": "breakeven only at 1R, gamma trail if more protective",
+    "gammaBarsMultiSymbol": "getAgentView includes multi-symbol gamma bars",
+    "autoEngineDisabled": "confidenceThreshold=999, only Claude Code + fast executor"
+  },
+  "weeklyCalendar": {
+    "mon_apr14": "PPI DONE",
+    "tue_apr15": "Empire State",
+    "wed_apr16": "Philly+Claims",
+    "thu_apr17": "FOMC Waller"
+  },
+  "broker_specs": {
+    "NAS100": {
+      "min_volume": 0.1,
+      "spread": 1,
+      "value_per_point_at_min": 0.1
+    },
+    "US30": {
+      "min_volume": 0.1,
+      "spread": 2,
+      "value_per_point_at_min": 0.1
+    },
+    "XAUUSD": {
+      "min_volume": 0.01,
+      "spread": 0.24,
+      "value_per_point_at_min": 1
+    }
+  },
+  "gammaBarsSnapshot": {
+    "ts": "2026-04-17T00:48:47.884Z",
+    "NAS100": [
+      {
+        "sym": "SPX",
+        "strike": 7035,
+        "gamma": 2466,
+        "type": "support",
+        "cfd": 26297
+      },
+      {
+        "sym": "SPX",
+        "strike": 7030,
+        "gamma": -2030,
+        "type": "resistance",
+        "cfd": 26279
+      },
+      {
+        "sym": "SPX",
+        "strike": 7015,
+        "gamma": -1952,
+        "type": "resistance",
+        "cfd": 26223
+      },
+      {
+        "sym": "SPX",
+        "strike": 7000,
+        "gamma": -1525,
+        "type": "resistance",
+        "cfd": 26167
+      },
+      {
+        "sym": "SPX",
+        "strike": 6865,
+        "gamma": 1482,
+        "type": "support",
+        "cfd": 25662
+      },
+      {
+        "sym": "SPX",
+        "strike": 7010,
+        "gamma": 1215,
+        "type": "support",
+        "cfd": 26204
+      },
+      {
+        "sym": "SPX",
+        "strike": 6750,
+        "gamma": -947,
+        "type": "resistance",
+        "cfd": 25232
+      },
+      {
+        "sym": "SPX",
+        "strike": 7100,
+        "gamma": 862,
+        "type": "support",
+        "cfd": 26540
+      }
+    ],
+    "US30": [
+      {
+        "sym": "DIA",
+        "strike": 488,
+        "gamma": 44,
+        "type": "support",
+        "cfd": 48821
+      },
+      {
+        "sym": "DIA",
+        "strike": 490,
+        "gamma": -36,
+        "type": "resistance",
+        "cfd": 49021
+      },
+      {
+        "sym": "DIA",
+        "strike": 497,
+        "gamma": -24,
+        "type": "resistance",
+        "cfd": 49721
+      },
+      {
+        "sym": "DIA",
+        "strike": 495,
+        "gamma": 14,
+        "type": "support",
+        "cfd": 49521
+      },
+      {
+        "sym": "DIA",
+        "strike": 480,
+        "gamma": -12,
+        "type": "resistance",
+        "cfd": 48021
+      },
+      {
+        "sym": "DIA",
+        "strike": 483,
+        "gamma": -6,
+        "type": "resistance",
+        "cfd": 48321
+      }
+    ],
+    "XAUUSD": [
+      {
+        "sym": "GLD",
+        "strike": 450,
+        "gamma": 82,
+        "type": "support",
+        "cfd": 4913
+      },
+      {
+        "sym": "GLD",
+        "strike": 425,
+        "gamma": 43,
+        "type": "support",
+        "cfd": 4640
+      },
+      {
+        "sym": "GLD",
+        "strike": 445,
+        "gamma": 21,
+        "type": "support",
+        "cfd": 4858
+      },
+      {
+        "sym": "GLD",
+        "strike": 452,
+        "gamma": 14,
+        "type": "support",
+        "cfd": 4935
+      },
+      {
+        "sym": "GLD",
+        "strike": 437,
+        "gamma": 10,
+        "type": "support",
+        "cfd": 4771
+      },
+      {
+        "sym": "GLD",
+        "strike": 455,
+        "gamma": 9,
+        "type": "support",
+        "cfd": 4967
+      }
+    ]
+  },
+  "flowSnapshot": {
+    "combinedIntention": {
+      "narrative": "Institutions removing SPX/QQQ bearish hedges while making massive structural bet on GLD455. Rotation from tech to gold.",
+      "evidence": [
+        "SPX7000: -56K puts CLOSING + +29K calls opening = removing bearish protection",
+        "SPX6865: +38K calls OPENING = structural bullish positioning long-term",
+        "QQQ645: -32K calls + -359 puts CLOSING = degrossing, reducing overall exposure",
+        "GLD455: $151K + $130K = $281K+ INSTITUTIONAL call buying = structural gold bull",
+        "DIA488: +2919 calls OPENING = new bullish bet on Dow"
+      ],
+      "scenarios": {
+        "bull": "SPX7035 holds, NAS bounces to 7100. XAU breaks GLD450 to 4991.",
+        "bear": "QQQ degross continues, NAS breaks 7030/7000 to 6865. XAU gammaFlip rejection at 4820.",
+        "base": "NAS congestion 7010-7040. US30 gamma flip oscillation. XAU markup toward 4853 (GLD445)."
+      }
+    },
+    "keyInstitutionalTrades": [
+      {
+        "sym": "GLD",
+        "strike": 455,
+        "premium": 281000,
+        "type": "CALL",
+        "signal": "bullish",
+        "interpretation": "Structural gold bull thesis"
+      },
+      {
+        "sym": "SPX",
+        "strike": 7000,
+        "premium": 57750,
+        "type": "PUT_CLOSE",
+        "signal": "bullish",
+        "interpretation": "Removing bearish hedge"
+      },
+      {
+        "sym": "SPY",
+        "strike": 690,
+        "premium": 104842,
+        "type": "?",
+        "signal": "mixed",
+        "interpretation": "Battle at SPY690-694"
+      },
+      {
+        "sym": "DIA",
+        "strike": 488,
+        "premium": 18154,
+        "type": "CALL",
+        "signal": "bullish",
+        "interpretation": "Dow call buying"
+      }
+    ]
+  },
+  "volSnapshot": {
+    "ts": "2026-04-17T00:48:47.884Z",
+    "vix": 17.94,
+    "regime": "low_vol",
+    "note": "Low vol regime, VIX 17.94"
+  },
+  "vannaSnapshot": {
+    "vixChg": -1.27,
+    "uvixChg": -0.17,
+    "active": false,
+    "refuge": false
+  },
+  "gexSnapshot": {
+    "timestamp": "2026-04-09T21:11:00.000Z",
+    "trend": "bearish",
+    "perSymbol": {
+      "SPX": {
+        "callGamma": "21B",
+        "putGamma": "-2,225B",
+        "totalGamma": "-2,204B",
+        "zeroDte": "-99B",
+        "gammaFlip": 8030,
+        "note": "MASSIVE negative gamma = dealers AMPLIFY moves. Flip at 8030 = unreachable."
+      },
+      "QQQ": {
+        "callGamma": "0",
+        "putGamma": "-128B",
+        "totalGamma": "-128B",
+        "zeroDte": "-2.5B",
+        "gammaFlip": 609.8,
+        "note": "ZERO call gamma = no upside dealer support. Breakdowns accelerate."
+      },
+      "DIA": {
+        "callGamma": "0",
+        "putGamma": "-1.5B",
+        "totalGamma": "-1.5B",
+        "zeroDte": "-7M",
+        "gammaFlip": 481.85,
+        "note": "ZERO call gamma. Gamma flip 481.85 = below price = negative territory."
+      },
+      "GLD": {
+        "callGamma": "117M",
+        "putGamma": "-31B",
+        "totalGamma": "-31B",
+        "zeroDte": "+3.8B",
+        "gammaFlip": 545,
+        "note": "0DTE positive but total negative. Flip at 545 = way above."
+      }
+    }
+  },
+  "odteSnapshot": {
+    "timestamp": "2026-04-09T21:11:00.000Z",
+    "bias": "neutral",
+    "gexRatio": 0.95,
+    "maxGexStrike": 6740,
+    "maxGexStrike_NAS": 24777,
+    "hedgeWall": 6820,
+    "topSupport": [
+      {
+        "strike": 6740,
+        "gamma": "+1,858M",
+        "nas": 24777
+      },
+      {
+        "strike": 6820,
+        "gamma": "+1,042M",
+        "nas": 25071
+      }
+    ],
+    "topResistance": [
+      {
+        "strike": 6750,
+        "gamma": "-1,624M",
+        "nas": 24814
+      },
+      {
+        "strike": 6830,
+        "gamma": "-947M",
+        "nas": 25108
+      }
+    ],
+    "note": "0DTE maxStrike 6740 = MAGNETIC TARGET if selloff. HedgeWall 6820 = intraday support."
+  },
+  "macroSnapshot": {
+    "ts": "2026-04-17T00:48:47.884Z",
+    "dxy": 98.212,
+    "tlt": 86.28,
+    "nextEvent": "FOMC Waller +17.3h Medium"
+  },
+  "levelsSnapshot": {
+    "NAS": {
+      "callWall": 26574,
+      "putWall": 24328,
+      "gammaFlip": 29924,
+      "keyGamma": 26200,
+      "putControl": 26386
+    },
+    "US30": {
+      "callWall": 48845,
+      "putWall": 47544,
+      "gammaFlip": 48666,
+      "note": "PRICE AT GAMMAFLIP"
+    },
+    "XAU": {
+      "callWall": 5180,
+      "putWall": 3926,
+      "gammaFlip": 4820,
+      "keyGamma": 4799,
+      "note": "Price 4795 just below flip"
+    }
+  },
+  "lastRatios": {
+    "NAS": 3.738,
+    "US30": 100.043,
+    "XAU": 10.9178
+  },
+  "todayStats": {
+    "date": "2026-04-13",
+    "trades": 3,
+    "results": [
+      {
+        "cfd": "NAS100",
+        "dir": "LONG",
+        "entry": 25274.7,
+        "exit": 25268.9,
+        "pnl": -0.58,
+        "reason": "L60 BREAK"
+      },
+      {
+        "cfd": "NAS100",
+        "dir": "SHORT",
+        "entry": 25269.4,
+        "exit": 25271.3,
+        "pnl": -0.19,
+        "reason": "accidental hedge"
+      },
+      {
+        "cfd": "US30",
+        "dir": "SHORT",
+        "entry": 47940,
+        "exit": 47969,
+        "pnl": -2.9,
+        "reason": "range unresolved + PPI risk"
+      }
+    ],
+    "totalPnL": -3.67,
+    "peakPnL": 2.7,
+    "endBalance": 900.74,
+    "lessonsDerived": [
+      "DIA HIRO divergence correct but price timeframe mismatch",
+      "Pepperstone=hedging account",
+      "L93 confirmed 3x",
+      "Use bridge close_position not executeClaudeTrade"
+    ]
+  },
+  "preIdentifiedSetups": [
+    {
+      "id": "xau-long-gld425",
+      "cfd": "XAUUSD",
+      "direction": "LONG",
+      "triggerLevel": 425,
+      "exactLevel": 4628,
+      "gamma": 46,
+      "rationale": "GLD P84 extreme. Fat support. DXY weak. R:R 6:1",
+      "scenarios": {
+        "bull": "GLD65 target",
+        "bear": "PPI surprise drops GLD"
+      }
+    },
+    {
+      "id": "nas-long-spx6865",
+      "cfd": "NAS100",
+      "direction": "LONG",
+      "triggerLevel": 6865,
+      "exactLevel": 25319,
+      "gamma": 1382,
+      "rationale": "Fattest NAS bar. 0DTE target 25448. R:R 1.6:1",
+      "scenarios": {
+        "bull": "SPX895 fade zone",
+        "bear": "GEX neg amplifies down"
+      }
+    },
+    {
+      "id": "us30-short-dia480",
+      "cfd": "US30",
+      "direction": "SHORT",
+      "triggerLevel": 480,
+      "exactLevel": 47985,
+      "gamma": -9,
+      "rationale": "AT gammaFlip. callGamma=0. Distribution. R:R 2.6:1",
+      "scenarios": {
+        "bull": "DIA85 breaks up",
+        "bear": "US30 markdown continues"
+      }
+    }
+  ],
+  "known_risks": [
+    "CFD prices != underlying options - conversion ratios apply and change each cycle",
+    "Data has 15-30s lag from SpotGamma",
+    "SL not guaranteed on gaps (especially around macro events like PCE)",
+    "Spread eats into profit",
+    "Very_negative gamma = extreme amplification both directions",
+    "HIGH IMPACT week: FOMC Wed (done), PCE Thu (TODAY), CPI Fri",
+    "Account ~$922. Max 5% risk per trade = ~$46 max risk",
+    "Fast executor can open duplicate positions with different order IDs"
+  ],
+  "weekAnalysis": {
+    "apr8_10": {
+      "actualPnL": -85.17,
+      "withModes": 22.6,
+      "withModesPyramid": 60.86,
+      "withAllSetups": 296.1,
+      "withScalps": 329.2,
+      "setupsFound": 23,
+      "additionalScalps": 15,
+      "rootCauses": [
+        "orders too far from price",
+        "US30/XAU neglected",
+        "CONFIRM mode too strict",
+        "executor bugs",
+        "no trade modes"
+      ],
+      "fixes": [
+        "L101-L109",
+        "trade modes SCALP/INTRADAY/SWING",
+        "breakeven buffer 5pts",
+        "executor 3 bugs fixed",
+        "bar thresholds lowered"
+      ]
+    }
+  },
+  "statisticalRules": {
+    "bestCFD": "US30 68.4% WR +27,954pts (N=491)",
+    "worstCombo": "NAS SHORT very_neg gamma 40.6% WR -14,106pts (N=377)",
+    "bestRegime": "positive gamma 69.6% WR (N=690)",
+    "bestConfirmation": "HIRO +15.1% WR boost",
+    "tapeWarning": "tape NEGATIVELY correlated 54.4% with vs 67.1% without",
+    "optimalConfirmations": "5 confirmations 75.8% WR (NOT 6)",
+    "optimalRR": "R:R 1.5-2.0 optimal 61.9% WR",
+    "bestDirection": "US30 SHORT 73.4% WR (N=369)",
+    "worstDirection": "NAS SHORT 43.4% WR (N=463)"
+  },
+  "recentCycles": [
+    {
+      "cycle": "C1758",
+      "ts": "2026-04-17T04:00:00.000Z",
+      "prices": {
+        "NAS": 26339,
+        "US30": 48666,
+        "XAU": 4795
+      },
+      "hiro": {
+        "SPX": "P39",
+        "QQQ": "P32",
+        "SPY": "P65",
+        "DIA": "P49",
+        "GLD": "P39"
+      },
+      "regime": "positive but VRP -0.0455 overrides (L16)",
+      "thesis": "Rally +740pts C1757. Inst profit-taking: QQQ calls closed, SPX put $7000 hedge. Congestion 7030-7045. Bearish GLD flow. SHORT bias.",
+      "keyFlow": "QQQ CALL $600 CLOSE $49M+$43M. SPX PUT $7000 hedge $57.75K. GLD SELL CALL$455 $281K+BUY PUT$456 $149K.",
+      "ordersActive": 10,
+      "positionsOpen": [],
+      "reasoning": "After +740pt NAS rally, institutions are clearly profit-taking and hedging. SPX HIRO P39 QQQ P32 bearish despite rally. 0DTE pin at 7030/26312 = gravity toward current. US30 at gammaFlip pivot. XAU institutional strongly bearish. SHORT NAS and XAU primary thesis.",
+      "marketFeel": "Post-rally congestion with institutional profit-taking",
+      "marketStructure": {
+        "NAS": "congestion",
+        "US30": "squeeze",
+        "XAU": "squeeze"
+      }
+    },
+    {
+      "cycle": "C1748",
+      "ts": "2026-04-14T14:16:52.000Z",
+      "prices": {
+        "NAS": 25624,
+        "US30": 48459,
+        "XAU": 4798
+      },
+      "hiro": {
+        "SPX": "P50",
+        "QQQ": "P68",
+        "DIA": "P73",
+        "GLD": "P61"
+      },
+      "thesis": "NAS 66pts from SPX6950. SPY692 NEW proximity(L44). QQQ P68+6. US30 LONG+1.90.",
+      "ordersActive": 16,
+      "positionsOpen": [
+        "us30-long-dia485-C1746"
+      ],
+      "marketStructure": {
+        "NAS": "markup",
+        "US30": "markup",
+        "XAU": "congestion"
+      }
+    },
+    {
+      "cycle": "C1749",
+      "ts": "2026-04-14T14:20:08.000Z",
+      "prices": {
+        "NAS": 25612,
+        "US30": 48466,
+        "XAU": 4804
+      },
+      "hiro": {
+        "SPX": "P48",
+        "QQQ": "P63",
+        "DIA": "P76",
+        "GLD": "P63"
+      },
+      "thesis": "NAS LONG 25616(BE)+US30 LONG 48455. DIA P76 strongest. QQQ P63 pullback. Inst hedging DIA PUT410.",
+      "ordersActive": 16,
+      "positionsOpen": [
+        "nas-long-spy692-C1748",
+        "us30-long-dia485-C1746"
+      ],
+      "marketStructure": {
+        "NAS": "markup",
+        "US30": "markup",
+        "XAU": "markup"
+      }
+    },
+    {
+      "cycle": "C1750",
+      "ts": "2026-04-14T14:22:53.000Z",
+      "prices": {
+        "NAS": 25636,
+        "US30": 48432,
+        "XAU": 4802
+      },
+      "hiro": {
+        "SPX": "P48",
+        "QQQ": "P68",
+        "DIA": "P73",
+        "GLD": "P76"
+      },
+      "thesis": "MASSIVE BULLISH: tape 100, flow+30M, .8M VIX sell. NAS 60pts from 6950. GLD P76 surging.",
+      "ordersActive": 16,
+      "positionsOpen": [
+        "nas-long-spy692-C1748",
+        "us30-long-dia485-C1746"
+      ],
+      "marketStructure": {
+        "NAS": "markup",
+        "US30": "markup",
+        "XAU": "markup"
+      }
+    },
+    {
+      "cycle": "C1751",
+      "ts": "2026-04-14T14:25:22.000Z",
+      "prices": {
+        "NAS": 25640,
+        "US30": 48402,
+        "XAU": 4800
+      },
+      "hiro": {
+        "SPX": "P49",
+        "QQQ": "P68",
+        "DIA": "P70",
+        "GLD": "P76"
+      },
+      "thesis": "NAS closed +1.52(trail). US30 -5.50 52pts to SL. DIA P70. Tape -100=noise. VIX mega hedging 13M.",
+      "ordersActive": 16,
+      "positionsOpen": [
+        "us30-long-dia485-C1746"
+      ],
+      "marketStructure": {
+        "NAS": "markup",
+        "US30": "markup",
+        "XAU": "markup"
+      }
+    },
+    {
+      "cycle": "C1752",
+      "ts": "2026-04-14T14:28:07.000Z",
+      "prices": {
+        "NAS": 25634,
+        "US30": 48411,
+        "XAU": 4809
+      },
+      "hiro": {
+        "SPX": "P49",
+        "QQQ": "P67",
+        "DIA": "P73",
+        "GLD": "P76"
+      },
+      "thesis": "STABILIZATION. US30 recovering -4.00. DIA P73 back. Tape normalized. Flow +36M. XAU 35pts from GLD445.",
+      "ordersActive": 16,
+      "positionsOpen": [
+        "us30-long-dia485-C1746"
+      ],
+      "marketStructure": {
+        "NAS": "markup",
+        "US30": "markup",
+        "XAU": "markup"
+      }
+    },
+    {
+      "cycle": "C1753",
+      "ts": "2026-04-14T14:30:22.000Z",
+      "prices": {
+        "NAS": 25645,
+        "US30": 48394,
+        "XAU": 4807
+      },
+      "hiro": {
+        "SPX": "P51",
+        "QQQ": "P70",
+        "DIA": "P72",
+        "GLD": "P77"
+      },
+      "thesis": "NAS 59pts from 6950. HIRO all improving. US30 -6.00 congestion. GLD P77 high.",
+      "ordersActive": 16,
+      "positionsOpen": [
+        "us30-long-dia485-C1746"
+      ],
+      "marketStructure": {
+        "NAS": "markup",
+        "US30": "congestion",
+        "XAU": "markup"
+      }
+    },
+    {
+      "cycle": "C1754",
+      "ts": "2026-04-14T14:32:22.000Z",
+      "prices": {
+        "NAS": 25649,
+        "US30": 48384,
+        "XAU": 4812
+      },
+      "hiro": {
+        "SPX": "P53",
+        "QQQ": "P69",
+        "DIA": "P73",
+        "GLD": "P82"
+      },
+      "thesis": "US30 -6.70 34pts SL. GLD P82 surging. NAS 59pts from 6950.",
+      "ordersActive": 16,
+      "positionsOpen": [
+        "us30-long-dia485-C1746"
+      ],
+      "marketStructure": {
+        "NAS": "markup",
+        "US30": "congestion",
+        "XAU": "markup"
+      }
+    },
+    {
+      "cycle": "C1755",
+      "ts": "2026-04-14T14:34:52.000Z",
+      "prices": {
+        "NAS": 25645,
+        "US30": 48398,
+        "XAU": 4814
+      },
+      "hiro": {
+        "SPX": "P51",
+        "QQQ": "P65",
+        "DIA": "P73",
+        "GLD": "P82"
+      },
+      "thesis": "US30 RECOVERING +14pts. SL 34→48pts. XAU 30pts from GLD445. NAS 63pts SPX6950.",
+      "ordersActive": 16,
+      "positionsOpen": [
+        "us30-long-dia485-C1746"
+      ],
+      "marketStructure": {
+        "NAS": "markup",
+        "US30": "congestion",
+        "XAU": "markup"
+      }
+    },
+    {
+      "cycle": "C1759",
+      "ts": "2026-04-17T00:48:47.884Z",
+      "prices": {
+        "NAS": 26341,
+        "US30": 48642,
+        "XAU": 4799.79
+      },
+      "hiro": {
+        "SPX": "P31",
+        "QQQ": "P32",
+        "SPY": "P65",
+        "DIA": "P49",
+        "GLD": "P39"
+      },
+      "regime": "SPX bearish P31 + QQQ P32 bearish, SPY diverging P65",
+      "thesis": "Overnight evening. Prices flat. Orders from C1758 valid. SPX HIRO deteriorated P39→P31.",
+      "keyFlow": "GLD455 $417K call buy (structural bull). SPY690 puts $104K bearish.",
+      "ordersActive": 12,
+      "positionsOpen": [],
+      "reasoning": "No churn overnight. All 12 orders flank current prices structurally. L76 active.",
+      "marketFeel": "Evening chop, pre-Waller noise, low volume.",
+      "marketStructure": {
+        "NAS100": "congestion",
+        "US30": "at_gammaflip",
+        "XAUUSD": "markup_pullback"
+      }
+    }
+  ],
+  "marketStructure": {
+    "NAS100": "congestion",
+    "US30": "at_gammaflip",
+    "XAUUSD": "markup_pullback"
+  },
+  "backtestRules": {
+    "source": "576 days, 160K candles, 2,246 touch events (2024-01 to 2026-04)",
+    "entrySignals": {
+      "hammer": "76% bounce 1h (N=129) — STRONGEST",
+      "doji": "69% bounce 1h (N=262)",
+      "wickRejection": "65% bounce 1h (N=371)",
+      "bodyThrough": "58-61% break continuation"
+    },
+    "fakeBreaks": {
+      "rate": "72% of touches are fake breaks (N=1610)",
+      "avgPenetration": "61pts NAS before reversal",
+      "avgReversal": "113pts after fake break",
+      "fatBarFakeRate": "77% (vs 66% thin bars)",
+      "action": "Wait 2nd candle body-through"
+    },
+    "postBreak": {
+      "pullbackRate": "69% pull back to retest (N=723)",
+      "retestHoldRate": "65% hold as new S/R",
+      "firstHourMomentum": "+34pts avg"
+    },
+    "barSize": {
+      "mega1B": "47% bounce — breakout zone, use LEVEL",
+      "small100M": "55% bounce — scalp bounce, use CONFIRM",
+      "note": "COUNTER-INTUITIVE: bigger bars bounce LESS"
+    },
+    "vrp": {
+      "negative": "VRP<-0.02 = 64% break (N=457). NEVER fade.",
+      "positive": "VRP>0.02 = 49% bounce (N=736). Coin flip."
+    },
+    "vix": {
+      "low": "VIX<20 = 38% bounce. Unreliable.",
+      "high": "VIX>20 = 50% bounce. More reliable."
+    },
+    "optimalSLTP": {
+      "NAS": {
+        "scalp": "SL21/TP52",
+        "intraday": "SL42/TP87",
+        "swing": "SL83/TP183"
+      },
+      "US30": {
+        "scalp": "SL30/TP71",
+        "intraday": "SL56/TP109",
+        "swing": "SL107/TP224"
+      },
+      "XAU": {
+        "scalp": "SL4/TP8",
+        "intraday": "SL6/TP12",
+        "swing": "SL9/TP26"
+      }
+    },
+    "fatBarEV": "SL15/TP100 at >1B bars = +13.5pts/trade (3x better)",
+    "xauWarning": "NO positive EV alone. Always needs confirmation.",
+    "levelToLevel": "NAS 3.1h avg (N=851). <50pts=1.2h. Neg regime=2.9h fastest.",
+    "opex": "OpEx day = 44% bounce (WORST). OpEx week = range -8%.",
+    "dayOfWeek": "Wed=57% (BEST). Thu=50% (WORST).",
+    "confluence": "SPX+SPY same level = +6% bounce edge",
+    "multiFactor": {
+      "bestCombos": "DAY_ALIGNED+VIX_HIGH=73%(N=494), DAY_ALIGNED+VRP+=72%(N=418)",
+      "worstCombos": "REG-+SUPPORT=23%, VIX_MID+VRP-=29%, FAT_BAR+REG_VNEG=30%",
+      "scoreThreshold": "Score+2=59% bounce, Score-3=28% (breakout)"
+    },
+    "overnight": {
+      "slMinimum": {
+        "NAS": "52pts P90",
+        "US30": "62pts P90",
+        "XAU": "8pts P90"
+      },
+      "weekendSL": {
+        "NAS": "223pts P90",
+        "US30": "254pts P90",
+        "XAU": "19pts P90"
+      },
+      "weekendSurvival200": {
+        "NAS": "88%",
+        "US30": "90%",
+        "XAU": "91%(SL20)"
+      },
+      "longBias": "NAS 61%, US30 60%, XAU 56% wins overnight"
+    },
+    "macro": {
+      "rangeIncrease": "+14% on macro days",
+      "barsBetter": "53% bounce vs 43% normal",
+      "strategy": "Fade spikes at gamma bars"
+    },
+    "drawdown": {
+      "recovery": "10pts=97%/4h, 20pts=93%, 30pts=85%, 40pts=79%, 50pts=73%",
+      "noReturn": "No clear point of no return — supports wider SL"
+    },
+    "momentum": {
+      "after3Down": "NAS 58% reversal (N=50)",
+      "after5Down": "NAS 67% reversal (N=9)",
+      "regimeDuration": "positive=7.7d, neutral=3.3d, negative=2.1d, very_neg=1.9d"
+    },
+    "vixRange": {
+      "low": "VIX<15: range 252pts, tighten SL",
+      "mid": "VIX15-20: range 360pts, normal SL",
+      "high": "VIX20-25: range 491pts, widen 35%",
+      "extreme": "VIX>30: range 1020pts, widen 180%"
+    },
+    "gapFill": "Small gaps fill 89-94%. Big >100pts only 52% fill."
+  }
+}

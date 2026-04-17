@@ -1,0 +1,30 @@
+{
+  "whitelist": [
+    "XAUUSD|SHORT|swing|regime=very_positive|vrp=positive|vix=high|dxy=down|struct=markdown|bar=small|iv=high|dow=Fri",
+    "XAUUSD|SHORT|swing|regime=very_positive|vrp=negative|vix=mid|dxy=up|struct=markdown|bar=medium|iv=mid|dow=Tue",
+    "US30|SHORT|swing|regime=very_positive|vrp=positive|vix=high|dxy=up|struct=markdown|bar=medium|iv=low|dow=Fri",
+    "NAS100|SHORT|swing|regime=positive|vrp=negative|vix=extreme|dxy=down|struct=markdown|bar=medium|iv=high|dow=Thu",
+    "XAUUSD|SHORT|scalp|regime=very_positive|vrp=negative|vix=mid|dxy=up|struct=congestion|bar=small|iv=mid|dow=Fri",
+    "XAUUSD|LONG|swing|regime=very_positive|vrp=positive|vix=high|dxy=flat|struct=markup|bar=small|iv=high|dow=Wed",
+    "XAUUSD|SHORT|swing|regime=very_positive|vrp=negative|vix=mid|dxy=flat|struct=markdown|bar=mega|iv=high|dow=Wed",
+    "US30|SHORT|swing|regime=very_positive|vrp=negative|vix=mid|dxy=flat|struct=rotation_day|bar=small|iv=low|dow=Fri",
+    "XAUUSD|SHORT|swing|regime=very_positive|vrp=positive|vix=mid|dxy=down|struct=rotation_day|bar=small|iv=mid|dow=Mon",
+    "NAS100|SHORT|swing|regime=positive|vrp=positive|vix=high|dxy=down|struct=rotation_day|bar=medium|iv=mid|dow=Fri",
+    "US30|SHORT|swing|regime=very_positive|vrp=positive|vix=mid|dxy=down|struct=markdown|bar=medium|iv=low|dow=Fri",
+    "XAUUSD|SHORT|swing|regime=very_positive|vrp=positive|vix=mid|dxy=down|struct=markdown|bar=small|iv=mid|dow=Tue",
+    "NAS100|SHORT|swing|regime=positive|vrp=negative|vix=high|dxy=flat|struct=markdown|bar=small|iv=mid|dow=Fri",
+    "NAS100|SHORT|swing|regime=very_positive|vrp=negative|vix=high|dxy=flat|struct=markdown|bar=small|iv=mid|dow=Mon"
+  ],
+  "blacklist": [
+    "XAUUSD|SHORT|swing|regime=very_positive|vrp=negative|vix=mid|dxy=up|struct=markdown|bar=small|iv=mid|dow=Fri",
+    "US30|SHORT|swing|regime=very_positive|vrp=negative|vix=mid|dxy=flat|struct=markdown|bar=small|iv=low|dow=Fri",
+    "NAS100|SHORT|swing|regime=positive|vrp=negative|vix=high|dxy=down|struct=markdown|bar=medium|iv=mid|dow=Wed",
+    "XAUUSD|SHORT|swing|regime=very_positive|vrp=positive|vix=mid|dxy=up|struct=markdown|bar=small|iv=mid|dow=Tue",
+    "NAS100|SHORT|swing|regime=very_positive|vrp=negative|vix=mid|dxy=up|struct=rotation_day|bar=small|iv=low|dow=Tue",
+    "NAS100|SHORT|swing|regime=positive|vrp=zero|vix=extreme|dxy=down|struct=markdown|bar=medium|iv=high|dow=Thu",
+    "XAUUSD|SHORT|swing|regime=very_positive|vrp=positive|vix=mid|dxy=flat|struct=rotation_day|bar=small|iv=low|dow=Mon",
+    "XAUUSD|SHORT|swing|regime=very_positive|vrp=positive|vix=mid|dxy=flat|struct=markdown|bar=medium|iv=low|dow=Fri",
+    "US30|SHORT|scalp|regime=very_positive|vrp=positive|vix=mid|dxy=flat|struct=congestion|bar=medium|iv=low|dow=Mon",
+    "US30|SHORT|swing|regime=very_positive|vrp=negative|vix=mid|dxy=flat|struct=markdown|bar=large|iv=mid|dow=Fri"
+  ]
+}

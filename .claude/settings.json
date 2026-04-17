@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl*)",
+      "Bash(cat*)",
+      "Bash(echo*)",
+      "Bash(python3*)",
+      "Bash(ls*)",
+      "Bash(tail*)",
+      "Bash(head*)",
+      "Bash(grep*)",
+      "Bash(wc*)",
+      "Bash(date*)",
+      "Bash(sleep*)",
+      "Bash(pm2*)",
+      "Read(*)",
+      "Write(/Users/samuellondono/spotgamma_monitor/data/*)",
+      "Edit(/Users/samuellondono/spotgamma_monitor/data/*)"
+    ]
+  }
+}

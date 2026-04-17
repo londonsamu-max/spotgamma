@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "spotgamma",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["dist/index.js"],
+      "port": 3000,
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  ]
+}

@@ -1,0 +1,379 @@
+{
+  "pendingOrders": [
+    {
+      "id": "nas-short-7100-callwall-c1758",
+      "cfd": "NAS100",
+      "direction": "SHORT",
+      "tradeMode": "intraday",
+      "exactLevel": 26574,
+      "entryMode": "level",
+      "triggerSource": "spotgamma",
+      "triggerSymbol": "SPX",
+      "triggerLevel": 7100,
+      "structuralSL": 26624,
+      "tp1": 26339,
+      "tp2": 26200,
+      "volume": 0.1,
+      "rationale": "SPX$7100 callWall (+862M). Ceiling +740pt rally. HIRO QQQ P32. R:R 235/50=4.7:1.",
+      "conviction": "MEDIUM",
+      "lessonsApplied": [
+        "L83",
+        "L43",
+        "L58",
+        "L60"
+      ],
+      "expiresAt": "2026-04-17T20:00:00.000Z",
+      "status": "pending",
+      "sl": 26624,
+      "createdAt": "2026-04-16T23:56:19.358Z",
+      "entryZone": [
+        26554,
+        26594
+      ]
+    },
+    {
+      "id": "nas-long-7010-c1758",
+      "cfd": "NAS100",
+      "direction": "LONG",
+      "tradeMode": "intraday",
+      "exactLevel": 26237,
+      "entryMode": "confirm",
+      "triggerSource": "spotgamma",
+      "triggerSymbol": "SPX",
+      "triggerLevel": 7010,
+      "structuralSL": 26185,
+      "tp1": 26331,
+      "tp2": 26574,
+      "volume": 0.1,
+      "rationale": "SPX$7010 (+1215M fat green). 102pt pullback. CONFIRM counter-trend. 0DTE +1929M. R:R 94/52=1.81:1.",
+      "conviction": "LOW_MEDIUM",
+      "lessonsApplied": [
+        "L43",
+        "L60",
+        "L83",
+        "L59"
+      ],
+      "expiresAt": "2026-04-17T20:00:00.000Z",
+      "status": "pending",
+      "sl": 26185,
+      "createdAt": "2026-04-16T23:56:19.358Z",
+      "entryZone": [
+        26217,
+        26257
+      ]
+    },
+    {
+      "id": "nas-short-7000-breakdown-c1758",
+      "cfd": "NAS100",
+      "direction": "SHORT",
+      "tradeMode": "intraday",
+      "exactLevel": 26185,
+      "entryMode": "level",
+      "triggerSource": "spotgamma",
+      "triggerSymbol": "SPX",
+      "triggerLevel": 7000,
+      "structuralSL": 26235,
+      "tp1": 26069,
+      "tp2": 25694,
+      "volume": 0.1,
+      "rationale": "SPX$7000 (-1524M) BREAKDOWN. Inst PUT $7000 hedge $57.75K Apr24. L58 vacuum to 6865. L80 breakout=LEVEL. R:R 116/50=2.32:1.",
+      "conviction": "HIGH",
+      "lessonsApplied": [
+        "L52",
+        "L80",
+        "L82",
+        "L58",
+        "L83"
+      ],
+      "expiresAt": "2026-04-17T20:00:00.000Z",
+      "status": "pending",
+      "sl": 26235,
+      "createdAt": "2026-04-16T23:56:19.358Z",
+      "entryZone": [
+        26165,
+        26205
+      ]
+    },
+    {
+      "id": "nas-long-6865-swing-c1758",
+      "cfd": "NAS100",
+      "direction": "LONG",
+      "tradeMode": "swing",
+      "exactLevel": 25694,
+      "entryMode": "level",
+      "triggerSource": "spotgamma",
+      "triggerSymbol": "SPX",
+      "triggerLevel": 6865,
+      "structuralSL": 25569,
+      "tp1": 26200,
+      "tp2": 26574,
+      "tp3": 26948,
+      "volume": 0.03,
+      "rationale": "SPX$6865 (+1481M fat green). Major SWING support -645pts. R:R 506/125=4:1.",
+      "conviction": "MEDIUM",
+      "lessonsApplied": [
+        "L43",
+        "L58",
+        "L76",
+        "L107",
+        "L108"
+      ],
+      "expiresAt": null,
+      "status": "pending",
+      "sl": 25569,
+      "createdAt": "2026-04-16T23:56:19.358Z",
+      "entryZone": [
+        25674,
+        25714
+      ]
+    },
+    {
+      "id": "us30-short-gammaflip-c1758",
+      "cfd": "US30",
+      "direction": "SHORT",
+      "tradeMode": "intraday",
+      "exactLevel": 48616,
+      "entryMode": "level",
+      "triggerSource": "spotgamma",
+      "triggerSymbol": "DIA",
+      "triggerLevel": 483,
+      "structuralSL": 48766,
+      "tp1": 48345,
+      "tp2": 48044,
+      "volume": 0.1,
+      "rationale": "US30 gammaFlip BREAKDOWN. Negative gamma=amplified moves. All DIA bars below=resistance accelerators. VRP -0.0283. R:R 271/150=1.81:1.",
+      "conviction": "MEDIUM",
+      "lessonsApplied": [
+        "L1",
+        "L58",
+        "L82",
+        "L83",
+        "L104"
+      ],
+      "expiresAt": "2026-04-17T20:00:00.000Z",
+      "status": "pending",
+      "sl": 48766,
+      "createdAt": "2026-04-16T23:56:19.358Z",
+      "entryZone": [
+        48596,
+        48636
+      ]
+    },
+    {
+      "id": "xau-short-gammaflip-c1758",
+      "cfd": "XAUUSD",
+      "direction": "SHORT",
+      "tradeMode": "scalp",
+      "exactLevel": 4820,
+      "entryMode": "confirm",
+      "triggerSource": "spotgamma",
+      "triggerSymbol": "GLD",
+      "triggerLevel": 442,
+      "structuralSL": 4845,
+      "tp1": 4777,
+      "tp2": 4735,
+      "volume": 0.01,
+      "rationale": "XAU gammaFlip 4820. Inst GLD: SELL CALL$455 $281K+BUY PUT$456 $149K=bearish. HIRO P39. VRP -0.0987. L91 no LONG. R:R 43/25=1.72:1.",
+      "conviction": "MEDIUM",
+      "lessonsApplied": [
+        "L91",
+        "L52",
+        "L83",
+        "L60",
+        "L104"
+      ],
+      "expiresAt": "2026-04-17T15:30:00.000Z",
+      "status": "pending",
+      "sl": 4845,
+      "createdAt": "2026-04-16T23:56:19.358Z",
+      "entryZone": [
+        4815,
+        4825
+      ]
+    },
+    {
+      "id": "xau-short-4777-proximity-c1758",
+      "cfd": "XAUUSD",
+      "direction": "SHORT",
+      "tradeMode": "scalp",
+      "exactLevel": 4777,
+      "entryMode": "level",
+      "triggerSource": "spotgamma",
+      "triggerSymbol": "GLD",
+      "triggerLevel": 438,
+      "structuralSL": 4792,
+      "tp1": 4766,
+      "tp2": 4635,
+      "volume": 0.01,
+      "rationale": "L102 PROXIMITY. GLD$438 BREAK: HIRO P39+VRP-0.097+inst=3 BREAK. TP2=4635 R:R 9.5:1.",
+      "conviction": "LOW",
+      "lessonsApplied": [
+        "L102",
+        "L60",
+        "L91",
+        "L100"
+      ],
+      "expiresAt": "2026-04-17T15:30:00.000Z",
+      "status": "pending",
+      "sl": 4792,
+      "createdAt": "2026-04-16T23:56:19.358Z",
+      "entryZone": [
+        4772,
+        4782
+      ]
+    },
+    {
+      "id": "xau-long-425-swing-c1758",
+      "cfd": "XAUUSD",
+      "direction": "LONG",
+      "tradeMode": "swing",
+      "exactLevel": 4635,
+      "entryMode": "confirm",
+      "triggerSource": "spotgamma",
+      "triggerSymbol": "GLD",
+      "triggerLevel": 425,
+      "structuralSL": 4605,
+      "tp1": 4766,
+      "tp2": 4820,
+      "volume": 0.01,
+      "rationale": "GLD$425 (+42M FATTEST bar). SWING support -160pts. Contingency deep selloff. R:R 131/30=4.37:1.",
+      "conviction": "LOW",
+      "lessonsApplied": [
+        "L43",
+        "L90",
+        "L76",
+        "L107"
+      ],
+      "expiresAt": null,
+      "status": "pending",
+      "sl": 4605,
+      "createdAt": "2026-04-16T23:56:19.358Z",
+      "entryZone": [
+        4630,
+        4640
+      ]
+    },
+    {
+      "id": "us30-long-dia488-c1758",
+      "cfd": "US30",
+      "direction": "LONG",
+      "tradeMode": "intraday",
+      "exactLevel": 48836,
+      "entryMode": "confirm",
+      "triggerSource": "spotgamma",
+      "triggerSymbol": "DIA",
+      "triggerLevel": 488,
+      "structuralSL": 48750,
+      "tp1": 49036,
+      "tp2": 49237,
+      "volume": 0.1,
+      "rationale": "DIA$488 +44.4M callWall. +2919 calls OPENING institutional conviction. DIA tape +22 bullish. Overnight CONFIRM. R:R 2.3:1",
+      "conviction": "HIGH",
+      "lessonsApplied": [
+        "L68",
+        "L96",
+        "L104",
+        "L83",
+        "L52"
+      ],
+      "expiresAt": "2026-04-17T20:00:00.000Z",
+      "status": "pending",
+      "sl": 48750,
+      "createdAt": "2026-04-17T00:05:20.066Z",
+      "entryZone": [
+        48816,
+        48856
+      ]
+    },
+    {
+      "id": "xau-long-gld445-c1758",
+      "cfd": "XAUUSD",
+      "direction": "LONG",
+      "tradeMode": "intraday",
+      "exactLevel": 4853,
+      "entryMode": "level",
+      "triggerSource": "spotgamma",
+      "triggerSymbol": "GLD",
+      "triggerLevel": 445,
+      "structuralSL": 4841,
+      "tp1": 4908,
+      "tp2": 4962,
+      "volume": 0.01,
+      "rationale": "GLD$445 +21.4M. +5815 net OPENING conviction. Tape +65 VERY bullish. Call skew pos. DXY 98.18 weak. Inst $281K GLD455 target. R:R 4.6:1",
+      "conviction": "HIGH",
+      "lessonsApplied": [
+        "L83",
+        "L43",
+        "L52",
+        "L91",
+        "L104"
+      ],
+      "expiresAt": "2026-04-17T20:00:00.000Z",
+      "status": "pending",
+      "sl": 4841,
+      "createdAt": "2026-04-17T00:05:20.066Z",
+      "entryZone": [
+        4848,
+        4858
+      ]
+    },
+    {
+      "id": "xau-long-gld450-c1758",
+      "cfd": "XAUUSD",
+      "direction": "LONG",
+      "tradeMode": "swing",
+      "exactLevel": 4908,
+      "entryMode": "confirm",
+      "triggerSource": "spotgamma",
+      "triggerSymbol": "GLD",
+      "triggerLevel": 450,
+      "structuralSL": 4896,
+      "tp1": 4962,
+      "tp2": 4991,
+      "volume": 0.01,
+      "rationale": "GLD$450 +81.7M FATTEST bar. Overnight qualifying >30M (L76). Breakout = institutional target $281K GLD455. SWING. R:R 6.9:1",
+      "conviction": "HIGH",
+      "lessonsApplied": [
+        "L43",
+        "L76",
+        "L52",
+        "L107",
+        "L90"
+      ],
+      "expiresAt": "2026-04-20T20:00:00.000Z",
+      "status": "pending",
+      "sl": 4896,
+      "createdAt": "2026-04-17T00:05:20.066Z",
+      "entryZone": [
+        4903,
+        4913
+      ]
+    }
+  ],
+  "managedPositions": [],
+  "lastPriceCheck": "2026-04-17T04:25:00.731Z",
+  "cycleMetadata": {
+    "cycle": "C1759",
+    "ts": "2026-04-17T00:48:47.884Z",
+    "dataTimestamp": "2026-04-17T00:45:19.993Z",
+    "pricesSpotGamma": {
+      "NAS": 26341,
+      "US30": 48642,
+      "XAU": 4799.79
+    },
+    "pricesExecutor": {
+      "NAS": 25849,
+      "US30": 48535,
+      "XAU": 4822
+    },
+    "SPX": 7046.74417233905,
+    "marketStructure": {
+      "NAS100": "congestion",
+      "US30": "at_gammaflip",
+      "XAUUSD": "markup_pullback"
+    },
+    "hiroSummary": "SPX P31 QQQ P32 SPY P65 DIA P49 GLD P39 - SPX deteriorated from P39",
+    "combinedIntention": "Overnight evening chop. SPX HIRO further bearish P31. Orders from C1758 structurally sound, no changes. Pre-Waller 17h.",
+    "totalOrders": 12
+  }
+}

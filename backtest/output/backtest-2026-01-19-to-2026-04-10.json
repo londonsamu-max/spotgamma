@@ -1,0 +1,3469 @@
+{
+  "startDate": "2026-01-19",
+  "endDate": "2026-04-10",
+  "daysProcessed": 60,
+  "totalTrades": 68,
+  "winRate": 0.4852941176470588,
+  "netPnlDollars": -0.41,
+  "pnlByCfd": {
+    "NAS100": 63.79,
+    "US30": 0,
+    "XAUUSD": -64.2
+  },
+  "pnlByMode": {
+    "scalp": 15.01,
+    "intraday": 38.63,
+    "swing": -54.05
+  },
+  "pnlByDayOfWeek": {
+    "Mon": 10.77,
+    "Tue": 2.92,
+    "Wed": -2.85,
+    "Thu": -68.72,
+    "Fri": 57.47
+  },
+  "avgWin": 5.34,
+  "avgLoss": -5.05,
+  "largestWin": 18.67,
+  "largestLoss": -8,
+  "maxDrawdown": 66.2,
+  "maxDrawdownPct": 7.21,
+  "startingEquity": 918.78,
+  "endingEquity": 918.37,
+  "days": [
+    {
+      "date": "2026-01-19",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25270.5,
+          "close": 25245.4,
+          "high": 25318.6,
+          "low": 25085.6
+        },
+        "US30": {
+          "open": 48984.5,
+          "close": 48948.1,
+          "high": 49120.7,
+          "low": 48853.8
+        },
+        "XAUUSD": {
+          "open": 4633.93,
+          "close": 4670.94,
+          "high": 4690.73,
+          "low": 4629.29
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-01-20",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25246.8,
+          "close": 24995.6,
+          "high": 25288.8,
+          "low": 24947.5
+        },
+        "US30": {
+          "open": 48930.4,
+          "close": 48532.1,
+          "high": 48977.4,
+          "low": 48410.1
+        },
+        "XAUUSD": {
+          "open": 4675.1,
+          "close": 4763.55,
+          "high": 4766.31,
+          "low": 4659.36
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-01-21",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25001.5,
+          "close": 25361.3,
+          "high": 25506,
+          "low": 24881.1
+        },
+        "US30": {
+          "open": 48539.3,
+          "close": 49082.2,
+          "high": 49288.2,
+          "low": 48298.7
+        },
+        "XAUUSD": {
+          "open": 4760.68,
+          "close": 4831.32,
+          "high": 4888.55,
+          "low": 4755.55
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-01-22",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25407.1,
+          "close": 25480.8,
+          "high": 25596.9,
+          "low": 25340.6
+        },
+        "US30": {
+          "open": 49116.8,
+          "close": 49313.7,
+          "high": 49608,
+          "low": 49063.4
+        },
+        "XAUUSD": {
+          "open": 4832,
+          "close": 4936.3,
+          "high": 4940.84,
+          "low": 4772.45
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-01-23",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25470.7,
+          "close": 25546.4,
+          "high": 25705.8,
+          "low": 25401
+        },
+        "US30": {
+          "open": 49333.4,
+          "close": 48991,
+          "high": 49434.3,
+          "low": 48933.7
+        },
+        "XAUUSD": {
+          "open": 4944.49,
+          "close": 4985.91,
+          "high": 4989.88,
+          "low": 4899.67
+        }
+      },
+      "totalTrades": 1,
+      "wins": 1,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 2,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 2
+      },
+      "pnlByMode": {
+        "scalp": 2,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": [
+        {
+          "intentId": "2026-01-23-0145-XAUUSD-LONG-4934",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "scalp",
+          "entry": 4934.4324324324325,
+          "entryTs": 1769137200000,
+          "exit": 4936.4324324324325,
+          "exitTs": 1769163300000,
+          "exitReason": "trail",
+          "pnlPts": 2,
+          "pnlDollars": 2,
+          "durationMin": 435,
+          "maxAdverse": 33.22,
+          "maxFavorable": 32.86
+        }
+      ]
+    },
+    {
+      "date": "2026-01-26",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25310.2,
+          "close": 25729.2,
+          "high": 25801.1,
+          "low": 25274
+        },
+        "US30": {
+          "open": 48804,
+          "close": 49218.9,
+          "high": 49471.1,
+          "low": 48678.2
+        },
+        "XAUUSD": {
+          "open": 5008.85,
+          "close": 5008.22,
+          "high": 5111.23,
+          "low": 4989.76
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-01-27",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25728,
+          "close": 25982.7,
+          "high": 25990.5,
+          "low": 25714
+        },
+        "US30": {
+          "open": 49229.8,
+          "close": 48965.5,
+          "high": 49400,
+          "low": 48844.7
+        },
+        "XAUUSD": {
+          "open": 5022.86,
+          "close": 5181.14,
+          "high": 5190.22,
+          "low": 5013.76
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-01-28",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25997.8,
+          "close": 26143.6,
+          "high": 26224.1,
+          "low": 25872.5
+        },
+        "US30": {
+          "open": 48961.8,
+          "close": 48966.7,
+          "high": 49132.1,
+          "low": 48833.5
+        },
+        "XAUUSD": {
+          "open": 5172.51,
+          "close": 5417.52,
+          "high": 5419.13,
+          "low": 5157.13
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-01-29",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 26165.3,
+          "close": 25865.8,
+          "high": 26172.1,
+          "low": 25415.4
+        },
+        "US30": {
+          "open": 48983.2,
+          "close": 48965.9,
+          "high": 49290.8,
+          "low": 48570.5
+        },
+        "XAUUSD": {
+          "open": 5422.61,
+          "close": 5370.5,
+          "high": 5598.06,
+          "low": 5098.65
+        }
+      },
+      "totalTrades": 16,
+      "wins": 3,
+      "losses": 13,
+      "breakeven": 0,
+      "pnlDollars": -66.2,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": -66.2
+      },
+      "pnlByMode": {
+        "scalp": -3.5299999999999994,
+        "intraday": 0,
+        "swing": -62.67
+      },
+      "trades": [
+        {
+          "intentId": "2026-01-29-0100-XAUUSD-LONG-5487",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "scalp",
+          "entry": 5486.86013667426,
+          "entryTs": 1769649300000,
+          "exit": 5499.33027334852,
+          "exitTs": 1769650200000,
+          "exitReason": "tp1",
+          "pnlPts": 12.47,
+          "pnlDollars": 12.47,
+          "durationMin": 15,
+          "maxAdverse": 0,
+          "maxFavorable": 111.2
+        },
+        {
+          "intentId": "2026-01-29-0145-XAUUSD-LONG-5525",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "scalp",
+          "entry": 5524.666059225512,
+          "entryTs": 1769651100000,
+          "exit": 5516.666059225512,
+          "exitTs": 1769652000000,
+          "exitReason": "sl",
+          "pnlPts": -8,
+          "pnlDollars": -8,
+          "durationMin": 15,
+          "maxAdverse": 70.82,
+          "maxFavorable": 0
+        },
+        {
+          "intentId": "2026-01-29-0230-XAUUSD-LONG-5522",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "scalp",
+          "entry": 5521.759453302961,
+          "entryTs": 1769653800000,
+          "exit": 5513.759453302961,
+          "exitTs": 1769654700000,
+          "exitReason": "sl",
+          "pnlPts": -8,
+          "pnlDollars": -8,
+          "durationMin": 15,
+          "maxAdverse": 21.06,
+          "maxFavorable": 1.34
+        },
+        {
+          "intentId": "2026-01-29-0400-XAUUSD-LONG-5534",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "swing",
+          "entry": 5534.49840546697,
+          "entryTs": 1769659200000,
+          "exit": 5526.49840546697,
+          "exitTs": 1769660100000,
+          "exitReason": "sl",
+          "pnlPts": -8,
+          "pnlDollars": -8,
+          "durationMin": 15,
+          "maxAdverse": 24.73,
+          "maxFavorable": 0
+        },
+        {
+          "intentId": "2026-01-29-0445-XAUUSD-LONG-5549",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "swing",
+          "entry": 5548.530296127563,
+          "entryTs": 1769662800000,
+          "exit": 5540.530296127563,
+          "exitTs": 1769663700000,
+          "exitReason": "sl",
+          "pnlPts": -8,
+          "pnlDollars": -8,
+          "durationMin": 15,
+          "maxAdverse": 26.67,
+          "maxFavorable": 0
+        },
+        {
+          "intentId": "2026-01-29-0530-XAUUSD-LONG-5541",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "swing",
+          "entry": 5540.712528473804,
+          "entryTs": 1769664600000,
+          "exit": 5532.712528473804,
+          "exitTs": 1769665500000,
+          "exitReason": "sl",
+          "pnlPts": -8,
+          "pnlDollars": -8,
+          "durationMin": 15,
+          "maxAdverse": 13.54,
+          "maxFavorable": 8.23
+        },
+        {
+          "intentId": "2026-01-29-0615-XAUUSD-LONG-5560",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "swing",
+          "entry": 5559.565375854214,
+          "entryTs": 1769668200000,
+          "exit": 5551.565375854214,
+          "exitTs": 1769669100000,
+          "exitReason": "sl",
+          "pnlPts": -8,
+          "pnlDollars": -8,
+          "durationMin": 15,
+          "maxAdverse": 8.53,
+          "maxFavorable": 2.27
+        },
+        {
+          "intentId": "2026-01-29-0700-XAUUSD-LONG-5572",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "swing",
+          "entry": 5572.274259681093,
+          "entryTs": 1769673600000,
+          "exit": 5584.9385193621865,
+          "exitTs": 1769674500000,
+          "exitReason": "tp1",
+          "pnlPts": 12.66,
+          "pnlDollars": 12.66,
+          "durationMin": 15,
+          "maxAdverse": 0,
+          "maxFavorable": 22.98
+        },
+        {
+          "intentId": "2026-01-29-0745-XAUUSD-LONG-5575",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "swing",
+          "entry": 5575.110706150342,
+          "entryTs": 1769673600000,
+          "exit": 5587.781412300683,
+          "exitTs": 1769674500000,
+          "exitReason": "tp1",
+          "pnlPts": 12.67,
+          "pnlDollars": 12.67,
+          "durationMin": 15,
+          "maxAdverse": 1.1,
+          "maxFavorable": 20.14
+        },
+        {
+          "intentId": "2026-01-29-0915-XAUUSD-LONG-5554",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "swing",
+          "entry": 5554.2633257403195,
+          "entryTs": 1769678100000,
+          "exit": 5546.2633257403195,
+          "exitTs": 1769679000000,
+          "exitReason": "sl",
+          "pnlPts": -8,
+          "pnlDollars": -8,
+          "durationMin": 15,
+          "maxAdverse": 12.65,
+          "maxFavorable": 3.56
+        },
+        {
+          "intentId": "2026-01-29-1515-XAUUSD-LONG-5532",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "swing",
+          "entry": 5532.273348519362,
+          "entryTs": 1769700600000,
+          "exit": 5524.273348519362,
+          "exitTs": 1769701500000,
+          "exitReason": "sl",
+          "pnlPts": -8,
+          "pnlDollars": -8,
+          "durationMin": 15,
+          "maxAdverse": 26.11,
+          "maxFavorable": 0
+        },
+        {
+          "intentId": "2026-01-29-1945-XAUUSD-LONG-5347",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "swing",
+          "entry": 5347.2528473804105,
+          "entryTs": 1769715900000,
+          "exit": 5339.2528473804105,
+          "exitTs": 1769716800000,
+          "exitReason": "sl",
+          "pnlPts": -8,
+          "pnlDollars": -8,
+          "durationMin": 15,
+          "maxAdverse": 16.76,
+          "maxFavorable": 11.76
+        },
+        {
+          "intentId": "2026-01-29-2030-XAUUSD-LONG-5354",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "swing",
+          "entry": 5353.958086560365,
+          "entryTs": 1769718600000,
+          "exit": 5345.958086560365,
+          "exitTs": 1769719500000,
+          "exitReason": "sl",
+          "pnlPts": -8,
+          "pnlDollars": -8,
+          "durationMin": 15,
+          "maxAdverse": 17.47,
+          "maxFavorable": 8.29
+        },
+        {
+          "intentId": "2026-01-29-2115-XAUUSD-LONG-5331",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "swing",
+          "entry": 5330.865603644646,
+          "entryTs": 1769721300000,
+          "exit": 5322.865603644646,
+          "exitTs": 1769722200000,
+          "exitReason": "sl",
+          "pnlPts": -8,
+          "pnlDollars": -8,
+          "durationMin": 15,
+          "maxAdverse": 40.58,
+          "maxFavorable": 0
+        },
+        {
+          "intentId": "2026-01-29-2245-XAUUSD-LONG-5407",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "swing",
+          "entry": 5407.148974943052,
+          "entryTs": 1769726700000,
+          "exit": 5399.148974943052,
+          "exitTs": 1769727600000,
+          "exitReason": "sl",
+          "pnlPts": -8,
+          "pnlDollars": -8,
+          "durationMin": 15,
+          "maxAdverse": 23.85,
+          "maxFavorable": 0
+        },
+        {
+          "intentId": "2026-01-29-2330-XAUUSD-LONG-5395",
+          "cfd": "XAUUSD",
+          "direction": "LONG",
+          "tradeMode": "swing",
+          "entry": 5395.332118451025,
+          "entryTs": 1769729400000,
+          "exit": 5387.332118451025,
+          "exitTs": 1769730300000,
+          "exitReason": "sl",
+          "pnlPts": -8,
+          "pnlDollars": -8,
+          "durationMin": 15,
+          "maxAdverse": 26.02,
+          "maxFavorable": 2.86
+        }
+      ]
+    },
+    {
+      "date": "2026-01-30",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25881.2,
+          "close": 25519.2,
+          "high": 25897.1,
+          "low": 25448.2
+        },
+        "US30": {
+          "open": 48964.9,
+          "close": 48836.7,
+          "high": 49018.5,
+          "low": 48421.4
+        },
+        "XAUUSD": {
+          "open": 5400.04,
+          "close": 4882.54,
+          "high": 5451.06,
+          "low": 4681.35
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-02",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25412.5,
+          "close": 25762.8,
+          "high": 25836.9,
+          "low": 25069.6
+        },
+        "US30": {
+          "open": 48710.1,
+          "close": 49368.2,
+          "high": 49474.6,
+          "low": 48379
+        },
+        "XAUUSD": {
+          "open": 4781.13,
+          "close": 4660.33,
+          "high": 4884.79,
+          "low": 4402.69
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-03",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25778,
+          "close": 25307.1,
+          "high": 25919,
+          "low": 25110.7
+        },
+        "US30": {
+          "open": 49367.3,
+          "close": 49238,
+          "high": 49641.2,
+          "low": 48809.2
+        },
+        "XAUUSD": {
+          "open": 4677.34,
+          "close": 4946.65,
+          "high": 4993.79,
+          "low": 4677.21
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-04",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25284.6,
+          "close": 25011.5,
+          "high": 25408.6,
+          "low": 24679
+        },
+        "US30": {
+          "open": 49270.6,
+          "close": 49435.8,
+          "high": 49642.6,
+          "low": 49099.8
+        },
+        "XAUUSD": {
+          "open": 4962.55,
+          "close": 4964.52,
+          "high": 5091.97,
+          "low": 4853.42
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-05",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24972.7,
+          "close": 24325.6,
+          "high": 25066,
+          "low": 24304.7
+        },
+        "US30": {
+          "open": 49416.2,
+          "close": 48766.8,
+          "high": 49576.2,
+          "low": 48732.7
+        },
+        "XAUUSD": {
+          "open": 4980.35,
+          "close": 4779.24,
+          "high": 5023.76,
+          "low": 4759.57
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-06",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24330.6,
+          "close": 24997.6,
+          "high": 25121.5,
+          "low": 24142.5
+        },
+        "US30": {
+          "open": 48774.6,
+          "close": 50086.4,
+          "high": 50163.5,
+          "low": 48600.8
+        },
+        "XAUUSD": {
+          "open": 4761.51,
+          "close": 4963.97,
+          "high": 4971.43,
+          "low": 4654.79
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-09",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25113.6,
+          "close": 25269.6,
+          "high": 25336.4,
+          "low": 24864.8
+        },
+        "US30": {
+          "open": 50182.5,
+          "close": 50098.3,
+          "high": 50245.9,
+          "low": 49815.5
+        },
+        "XAUUSD": {
+          "open": 4990.56,
+          "close": 5058.19,
+          "high": 5086.57,
+          "low": 4964.97
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-10",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25284.9,
+          "close": 25164.9,
+          "high": 25357.3,
+          "low": 25109.2
+        },
+        "US30": {
+          "open": 50099.9,
+          "close": 50228.3,
+          "high": 50505.5,
+          "low": 50002.3
+        },
+        "XAUUSD": {
+          "open": 5067.96,
+          "close": 5025.21,
+          "high": 5078.74,
+          "low": 4987.25
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-11",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25175.2,
+          "close": 25200.7,
+          "high": 25378,
+          "low": 24972.1
+        },
+        "US30": {
+          "open": 50254.3,
+          "close": 50120.2,
+          "high": 50494.9,
+          "low": 49888.3
+        },
+        "XAUUSD": {
+          "open": 5027.37,
+          "close": 5084.42,
+          "high": 5119.3,
+          "low": 5017.74
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-12",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25200.5,
+          "close": 24738.4,
+          "high": 25336.3,
+          "low": 24638.7
+        },
+        "US30": {
+          "open": 50125.6,
+          "close": 49466.9,
+          "high": 50437.9,
+          "low": 49412.3
+        },
+        "XAUUSD": {
+          "open": 5096.67,
+          "close": 4921.8,
+          "high": 5100,
+          "low": 4878.61
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-13",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24750,
+          "close": 24696.7,
+          "high": 24912,
+          "low": 24496.1
+        },
+        "US30": {
+          "open": 49465.2,
+          "close": 49433.2,
+          "high": 49726.9,
+          "low": 49067.4
+        },
+        "XAUUSD": {
+          "open": 4889.84,
+          "close": 5042.83,
+          "high": 5046.12,
+          "low": 4887.12
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-16",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24748,
+          "close": 24671.4,
+          "high": 24847.8,
+          "low": 24597.7
+        },
+        "US30": {
+          "open": 49472.3,
+          "close": 49534.5,
+          "high": 49749.4,
+          "low": 49434.7
+        },
+        "XAUUSD": {
+          "open": 5035.13,
+          "close": 4993,
+          "high": 5035.45,
+          "low": 4965.21
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-17",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24695.5,
+          "close": 24700.6,
+          "high": 24817.6,
+          "low": 24377.9
+        },
+        "US30": {
+          "open": 49543.6,
+          "close": 49551.5,
+          "high": 49722.4,
+          "low": 49170.2
+        },
+        "XAUUSD": {
+          "open": 4991.65,
+          "close": 4877.36,
+          "high": 5000.87,
+          "low": 4840.92
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-18",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24700.9,
+          "close": 24867.9,
+          "high": 25059.3,
+          "low": 24633.6
+        },
+        "US30": {
+          "open": 49541.7,
+          "close": 49638.9,
+          "high": 49893.1,
+          "low": 49418.6
+        },
+        "XAUUSD": {
+          "open": 4869.58,
+          "close": 4977.2,
+          "high": 5010.93,
+          "low": 4854.08
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-19",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24877.1,
+          "close": 24765.2,
+          "high": 24984.2,
+          "low": 24680.4
+        },
+        "US30": {
+          "open": 49618.1,
+          "close": 49348.7,
+          "high": 49714.9,
+          "low": 49185.4
+        },
+        "XAUUSD": {
+          "open": 4976.48,
+          "close": 4996.14,
+          "high": 5022.28,
+          "low": 4960.07
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-20",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24771.9,
+          "close": 25011.9,
+          "high": 25072.4,
+          "low": 24613.1
+        },
+        "US30": {
+          "open": 49372.3,
+          "close": 49608.7,
+          "high": 49702.7,
+          "low": 49139.6
+        },
+        "XAUUSD": {
+          "open": 5003.18,
+          "close": 5103.76,
+          "high": 5106.91,
+          "low": 4981.58
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-23",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24984.7,
+          "close": 24728.2,
+          "high": 25000.4,
+          "low": 24611.2
+        },
+        "US30": {
+          "open": 49558.3,
+          "close": 48827.7,
+          "high": 49705.5,
+          "low": 48719.5
+        },
+        "XAUUSD": {
+          "open": 5109.06,
+          "close": 5227.61,
+          "high": 5237.81,
+          "low": 5107.83
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-24",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24737.9,
+          "close": 24966.7,
+          "high": 25023.9,
+          "low": 24641.3
+        },
+        "US30": {
+          "open": 48858.7,
+          "close": 49145.7,
+          "high": 49288.8,
+          "low": 48749.9
+        },
+        "XAUUSD": {
+          "open": 5230.95,
+          "close": 5143.71,
+          "high": 5249.73,
+          "low": 5093.38
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-25",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24965.6,
+          "close": 25408.7,
+          "high": 25442.7,
+          "low": 24942.7
+        },
+        "US30": {
+          "open": 49161.6,
+          "close": 49447.1,
+          "high": 49527.9,
+          "low": 49077.4
+        },
+        "XAUUSD": {
+          "open": 5141.52,
+          "close": 5164.94,
+          "high": 5217.73,
+          "low": 5120.31
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-26",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25342.6,
+          "close": 24984.7,
+          "high": 25369.4,
+          "low": 24814.9
+        },
+        "US30": {
+          "open": 49481.1,
+          "close": 49318.7,
+          "high": 49826.6,
+          "low": 49223.7
+        },
+        "XAUUSD": {
+          "open": 5165.12,
+          "close": 5184.9,
+          "high": 5205.51,
+          "low": 5130.3
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-02-27",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24967,
+          "close": 24897,
+          "high": 25050.6,
+          "low": 24734.9
+        },
+        "US30": {
+          "open": 49246.4,
+          "close": 48864,
+          "high": 49347.9,
+          "low": 48652.5
+        },
+        "XAUUSD": {
+          "open": 5188.23,
+          "close": 5279.95,
+          "high": 5280.82,
+          "low": 5166.8
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-03-02",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24676.1,
+          "close": 24954.5,
+          "high": 25060.9,
+          "low": 24438.7
+        },
+        "US30": {
+          "open": 48376.5,
+          "close": 48858.7,
+          "high": 49059.6,
+          "low": 48106.8
+        },
+        "XAUUSD": {
+          "open": 5315.78,
+          "close": 5321.97,
+          "high": 5419.36,
+          "low": 5260.44
+        }
+      },
+      "totalTrades": 5,
+      "wins": 3,
+      "losses": 2,
+      "breakeven": 0,
+      "pnlDollars": 17.57,
+      "pnlByCfd": {
+        "NAS100": 17.570000000000004,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 19.17,
+        "intraday": 0,
+        "swing": -1.6
+      },
+      "trades": [
+        {
+          "intentId": "2026-03-02-0145-NAS100-SHORT-24812",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "scalp",
+          "entry": 24812.23489425982,
+          "entryTs": 1772420400000,
+          "exit": 24807.23489425982,
+          "exitTs": 1772425800000,
+          "exitReason": "trail",
+          "pnlPts": 5,
+          "pnlDollars": 0.5,
+          "durationMin": 90,
+          "maxAdverse": 49.07,
+          "maxFavorable": 46.93
+        },
+        {
+          "intentId": "2026-03-02-0230-NAS100-SHORT-24827",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "scalp",
+          "entry": 24827.001510574017,
+          "entryTs": 1772420400000,
+          "exit": 24640.332326283988,
+          "exitTs": 1772437500000,
+          "exitReason": "tp1",
+          "pnlPts": 186.67,
+          "pnlDollars": 18.67,
+          "durationMin": 285,
+          "maxAdverse": 34.3,
+          "maxFavorable": 192.9
+        },
+        {
+          "intentId": "2026-03-02-1000-NAS100-SHORT-24602",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "swing",
+          "entry": 24602.388217522657,
+          "entryTs": 1772450100000,
+          "exit": 24672.882326283987,
+          "exitTs": 1772459100000,
+          "exitReason": "sl",
+          "pnlPts": -70.49,
+          "pnlDollars": -2.11,
+          "durationMin": 150,
+          "maxAdverse": 87.01,
+          "maxFavorable": 29.29
+        },
+        {
+          "intentId": "2026-03-02-1515-NAS100-SHORT-24775",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "swing",
+          "entry": 24774.866314199397,
+          "entryTs": 1772469000000,
+          "exit": 24845.749471299092,
+          "exitTs": 1772469900000,
+          "exitReason": "sl",
+          "pnlPts": -70.88,
+          "pnlDollars": -2.13,
+          "durationMin": 15,
+          "maxAdverse": 84.63,
+          "maxFavorable": 2.77
+        },
+        {
+          "intentId": "2026-03-02-2200-NAS100-SHORT-25042",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "swing",
+          "entry": 25042.473564954682,
+          "entryTs": 1772488800000,
+          "exit": 24954.5,
+          "exitTs": 1772495100000,
+          "exitReason": "eod",
+          "pnlPts": 87.97,
+          "pnlDollars": 2.64,
+          "durationMin": 105,
+          "maxAdverse": 0,
+          "maxFavorable": 132.47
+        }
+      ]
+    },
+    {
+      "date": "2026-03-03",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24969.7,
+          "close": 24674.6,
+          "high": 24972.4,
+          "low": 24315.6
+        },
+        "US30": {
+          "open": 48845.8,
+          "close": 48423.2,
+          "high": 48870,
+          "low": 47617.8
+        },
+        "XAUUSD": {
+          "open": 5334.19,
+          "close": 5088.16,
+          "high": 5379.75,
+          "low": 4996
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-03-04",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24667,
+          "close": 25097.9,
+          "high": 25182.4,
+          "low": 24465.4
+        },
+        "US30": {
+          "open": 48426.6,
+          "close": 48746.4,
+          "high": 48863.2,
+          "low": 48213.7
+        },
+        "XAUUSD": {
+          "open": 5109.8,
+          "close": 5140.99,
+          "high": 5206.12,
+          "low": 5084.03
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-03-05",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25130.8,
+          "close": 24973.3,
+          "high": 25209.4,
+          "low": 24742.6
+        },
+        "US30": {
+          "open": 48718.5,
+          "close": 47874.3,
+          "high": 48826.7,
+          "low": 47553.9
+        },
+        "XAUUSD": {
+          "open": 5150.07,
+          "close": 5080.88,
+          "high": 5194.93,
+          "low": 5050.68
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-03-06",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24987.2,
+          "close": 24641.6,
+          "high": 25107.6,
+          "low": 24573.7
+        },
+        "US30": {
+          "open": 47898.8,
+          "close": 47441.6,
+          "high": 48073.4,
+          "low": 46976
+        },
+        "XAUUSD": {
+          "open": 5083.76,
+          "close": 5171.06,
+          "high": 5174.61,
+          "low": 5062.44
+        }
+      },
+      "totalTrades": 12,
+      "wins": 10,
+      "losses": 2,
+      "breakeven": 0,
+      "pnlDollars": 47.32,
+      "pnlByCfd": {
+        "NAS100": 47.31999999999999,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 1,
+        "intraday": 46.31999999999999,
+        "swing": 0
+      },
+      "trades": [
+        {
+          "intentId": "2026-03-06-0100-NAS100-SHORT-25041",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "scalp",
+          "entry": 25041.42692889561,
+          "entryTs": 1772761500000,
+          "exit": 25036.42692889561,
+          "exitTs": 1772767800000,
+          "exitReason": "trail",
+          "pnlPts": 5,
+          "pnlDollars": 0.5,
+          "durationMin": 105,
+          "maxAdverse": 21.87,
+          "maxFavorable": 36.83
+        },
+        {
+          "intentId": "2026-03-06-0145-NAS100-SHORT-25064",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "scalp",
+          "entry": 25064.061119515885,
+          "entryTs": 1772762400000,
+          "exit": 25059.061119515885,
+          "exitTs": 1772769600000,
+          "exitReason": "trail",
+          "pnlPts": 5,
+          "pnlDollars": 0.5,
+          "durationMin": 120,
+          "maxAdverse": 5.54,
+          "maxFavorable": 59.46
+        },
+        {
+          "intentId": "2026-03-06-1045-NAS100-SHORT-25078",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 25078.082299546142,
+          "entryTs": 1772793900000,
+          "exit": 25002.31770045386,
+          "exitTs": 1772794800000,
+          "exitReason": "tp1",
+          "pnlPts": 75.76,
+          "pnlDollars": 7.58,
+          "durationMin": 15,
+          "maxAdverse": 0,
+          "maxFavorable": 102.48
+        },
+        {
+          "intentId": "2026-03-06-1130-NAS100-SHORT-24931",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 24930.96006051437,
+          "entryTs": 1772796600000,
+          "exit": 24855.639939485627,
+          "exitTs": 1772797500000,
+          "exitReason": "tp1",
+          "pnlPts": 75.32,
+          "pnlDollars": 7.53,
+          "durationMin": 15,
+          "maxAdverse": 0,
+          "maxFavorable": 81.66
+        },
+        {
+          "intentId": "2026-03-06-1345-NAS100-SHORT-24861",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 24861.354916792738,
+          "entryTs": 1772804700000,
+          "exit": 24786.24508320726,
+          "exitTs": 1772807400000,
+          "exitReason": "tp1",
+          "pnlPts": 75.11,
+          "pnlDollars": 7.51,
+          "durationMin": 45,
+          "maxAdverse": 0,
+          "maxFavorable": 75.45
+        },
+        {
+          "intentId": "2026-03-06-1430-NAS100-SHORT-24849",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 24848.836006051435,
+          "entryTs": 1772810100000,
+          "exit": 24773.76399394856,
+          "exitTs": 1772811000000,
+          "exitReason": "tp1",
+          "pnlPts": 75.07,
+          "pnlDollars": 7.51,
+          "durationMin": 15,
+          "maxAdverse": 0,
+          "maxFavorable": 154.04
+        },
+        {
+          "intentId": "2026-03-06-1600-NAS100-SHORT-24632",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 24631.808169440243,
+          "entryTs": 1772812800000,
+          "exit": 24626.808169440243,
+          "exitTs": 1772814600000,
+          "exitReason": "trail",
+          "pnlPts": 5,
+          "pnlDollars": 0.5,
+          "durationMin": 30,
+          "maxAdverse": 66.39,
+          "maxFavorable": 52.61
+        },
+        {
+          "intentId": "2026-03-06-1645-NAS100-SHORT-24695",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 24695.304084720123,
+          "entryTs": 1772815500000,
+          "exit": 24728.956127080182,
+          "exitTs": 1772816400000,
+          "exitReason": "sl",
+          "pnlPts": -33.65,
+          "pnlDollars": -3.37,
+          "durationMin": 15,
+          "maxAdverse": 66.4,
+          "maxFavorable": 63.7
+        },
+        {
+          "intentId": "2026-03-06-1945-NAS100-SHORT-24789",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 24788.54493192133,
+          "entryTs": 1772826300000,
+          "exit": 24822.267397881995,
+          "exitTs": 1772827200000,
+          "exitReason": "sl",
+          "pnlPts": -33.72,
+          "pnlDollars": -3.37,
+          "durationMin": 15,
+          "maxAdverse": 73.26,
+          "maxFavorable": 42.54
+        },
+        {
+          "intentId": "2026-03-06-2115-NAS100-SHORT-24824",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 24823.998487140696,
+          "entryTs": 1772834400000,
+          "exit": 24749.001512859304,
+          "exitTs": 1772835300000,
+          "exitReason": "tp1",
+          "pnlPts": 75,
+          "pnlDollars": 7.5,
+          "durationMin": 15,
+          "maxAdverse": 0,
+          "maxFavorable": 213.4
+        },
+        {
+          "intentId": "2026-03-06-2200-NAS100-SHORT-24754",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 24754.393343419062,
+          "entryTs": 1772834400000,
+          "exit": 24679.606656580938,
+          "exitTs": 1772835300000,
+          "exitReason": "tp1",
+          "pnlPts": 74.79,
+          "pnlDollars": 7.48,
+          "durationMin": 15,
+          "maxAdverse": 0,
+          "maxFavorable": 143.79
+        },
+        {
+          "intentId": "2026-03-06-2245-NAS100-SHORT-24672",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 24671.768532526476,
+          "entryTs": 1772837100000,
+          "exit": 24597.231467473528,
+          "exitTs": 1772838000000,
+          "exitReason": "tp1",
+          "pnlPts": 74.54,
+          "pnlDollars": 7.45,
+          "durationMin": 15,
+          "maxAdverse": 0,
+          "maxFavorable": 80.07
+        }
+      ]
+    },
+    {
+      "date": "2026-03-09",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24418.3,
+          "close": 24943.7,
+          "high": 25027.8,
+          "low": 23975.2
+        },
+        "US30": {
+          "open": 47069.6,
+          "close": 47700.8,
+          "high": 47880.8,
+          "low": 46294.2
+        },
+        "XAUUSD": {
+          "open": 5190.43,
+          "close": 5136.6,
+          "high": 5192.08,
+          "low": 5014.58
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-03-10",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24946.8,
+          "close": 24983.1,
+          "high": 25194.9,
+          "low": 24810.8
+        },
+        "US30": {
+          "open": 47710.6,
+          "close": 47715.7,
+          "high": 48222.2,
+          "low": 47432.3
+        },
+        "XAUUSD": {
+          "open": 5148.47,
+          "close": 5192.67,
+          "high": 5238.61,
+          "low": 5117.49
+        }
+      },
+      "totalTrades": 3,
+      "wins": 2,
+      "losses": 1,
+      "breakeven": 0,
+      "pnlDollars": 2.92,
+      "pnlByCfd": {
+        "NAS100": 2.9200000000000004,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0.5,
+        "intraday": 0,
+        "swing": 2.4200000000000004
+      },
+      "trades": [
+        {
+          "intentId": "2026-03-10-0230-NAS100-SHORT-24930",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "scalp",
+          "entry": 24929.55904617714,
+          "entryTs": 1773113400000,
+          "exit": 24924.55904617714,
+          "exitTs": 1773129600000,
+          "exitReason": "trail",
+          "pnlPts": 5,
+          "pnlDollars": 0.5,
+          "durationMin": 270,
+          "maxAdverse": 46.74,
+          "maxFavorable": 97.16
+        },
+        {
+          "intentId": "2026-03-10-1515-NAS100-SHORT-24972",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "swing",
+          "entry": 24972.087433762303,
+          "entryTs": 1773157500000,
+          "exit": 25081.32172596518,
+          "exitTs": 1773163800000,
+          "exitReason": "sl",
+          "pnlPts": -109.23,
+          "pnlDollars": -3.28,
+          "durationMin": 105,
+          "maxAdverse": 121.71,
+          "maxFavorable": 99.89
+        },
+        {
+          "intentId": "2026-03-10-2030-NAS100-SHORT-25189",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "swing",
+          "entry": 25188.741483724454,
+          "entryTs": 1773174600000,
+          "exit": 24998.637774413324,
+          "exitTs": 1773177300000,
+          "exitReason": "tp1",
+          "pnlPts": 190.1,
+          "pnlDollars": 5.7,
+          "durationMin": 45,
+          "maxAdverse": 0,
+          "maxFavorable": 222.34
+        }
+      ]
+    },
+    {
+      "date": "2026-03-11",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24982.6,
+          "close": 24927.3,
+          "high": 25158.8,
+          "low": 24854.5
+        },
+        "US30": {
+          "open": 47741.7,
+          "close": 47346.2,
+          "high": 47931.7,
+          "low": 47172.8
+        },
+        "XAUUSD": {
+          "open": 5190.1,
+          "close": 5176.09,
+          "high": 5223.06,
+          "low": 5148.96
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-03-12",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24919.4,
+          "close": 24552,
+          "high": 24921,
+          "low": 24500.5
+        },
+        "US30": {
+          "open": 47331.2,
+          "close": 46732.2,
+          "high": 47344.1,
+          "low": 46662.2
+        },
+        "XAUUSD": {
+          "open": 5182.09,
+          "close": 5079.24,
+          "high": 5191.69,
+          "low": 5054.86
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-03-13",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24563,
+          "close": 24336.6,
+          "high": 24787.5,
+          "low": 24325.5
+        },
+        "US30": {
+          "open": 46723,
+          "close": 46502.1,
+          "high": 47110.2,
+          "low": 46409.8
+        },
+        "XAUUSD": {
+          "open": 5074.8,
+          "close": 5021.27,
+          "high": 5128.47,
+          "low": 5009.59
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-03-16",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24308.7,
+          "close": 24643.7,
+          "high": 24806.5,
+          "low": 24287.4
+        },
+        "US30": {
+          "open": 46399.7,
+          "close": 46933.1,
+          "high": 47192.4,
+          "low": 46386.6
+        },
+        "XAUUSD": {
+          "open": 5010.84,
+          "close": 5006.19,
+          "high": 5038.02,
+          "low": 4967.24
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-03-17",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24657.1,
+          "close": 24799.1,
+          "high": 24889.1,
+          "low": 24511.6
+        },
+        "US30": {
+          "open": 46915.9,
+          "close": 46998.1,
+          "high": 47421.5,
+          "low": 46661.8
+        },
+        "XAUUSD": {
+          "open": 5010.94,
+          "close": 5005.44,
+          "high": 5044.31,
+          "low": 4973.47
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-03-18",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24801.8,
+          "close": 24390.1,
+          "high": 24986.6,
+          "low": 24341.6
+        },
+        "US30": {
+          "open": 47020,
+          "close": 46080.8,
+          "high": 47303.4,
+          "low": 46037.2
+        },
+        "XAUUSD": {
+          "open": 5005.02,
+          "close": 4818.83,
+          "high": 5016.32,
+          "low": 4807
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-03-19",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24405.1,
+          "close": 24396.6,
+          "high": 24503.2,
+          "low": 24107
+        },
+        "US30": {
+          "open": 46153,
+          "close": 46082,
+          "high": 46300.1,
+          "low": 45716.2
+        },
+        "XAUUSD": {
+          "open": 4829.45,
+          "close": 4650.33,
+          "high": 4867.03,
+          "low": 4502.58
+        }
+      },
+      "totalTrades": 1,
+      "wins": 1,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0.15,
+      "pnlByCfd": {
+        "NAS100": 0.15,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0.15
+      },
+      "trades": [
+        {
+          "intentId": "2026-03-19-1130-NAS100-SHORT-24435",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "swing",
+          "entry": 24434.789634146342,
+          "entryTs": 1773924300000,
+          "exit": 24429.789634146342,
+          "exitTs": 1773957600000,
+          "exitReason": "trail",
+          "pnlPts": 5,
+          "pnlDollars": 0.15,
+          "durationMin": 555,
+          "maxAdverse": 35.41,
+          "maxFavorable": 327.79
+        }
+      ]
+    },
+    {
+      "date": "2026-03-20",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24430.3,
+          "close": 23985.7,
+          "high": 24440.9,
+          "low": 23753.4
+        },
+        "US30": {
+          "open": 46092.9,
+          "close": 45784.1,
+          "high": 46229.7,
+          "low": 45346.5
+        },
+        "XAUUSD": {
+          "open": 4659.03,
+          "close": 4496.98,
+          "high": 4735.93,
+          "low": 4477.38
+        }
+      },
+      "totalTrades": 10,
+      "wins": 5,
+      "losses": 5,
+      "breakeven": 0,
+      "pnlDollars": 4.97,
+      "pnlByCfd": {
+        "NAS100": 4.969999999999999,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0.5,
+        "intraday": 0,
+        "swing": 4.469999999999999
+      },
+      "trades": [
+        {
+          "intentId": "2026-03-20-0145-NAS100-SHORT-24361",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "scalp",
+          "entry": 24360.62700228833,
+          "entryTs": 1773975600000,
+          "exit": 24355.62700228833,
+          "exitTs": 1774002600000,
+          "exitReason": "trail",
+          "pnlPts": 5,
+          "pnlDollars": 0.5,
+          "durationMin": 450,
+          "maxAdverse": 80.27,
+          "maxFavorable": 97.23
+        },
+        {
+          "intentId": "2026-03-20-0915-NAS100-SHORT-24283",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "swing",
+          "entry": 24282.805491990846,
+          "entryTs": 1774000800000,
+          "exit": 24372.06483600305,
+          "exitTs": 1774002600000,
+          "exitReason": "sl",
+          "pnlPts": -89.26,
+          "pnlDollars": -2.68,
+          "durationMin": 30,
+          "maxAdverse": 97.19,
+          "maxFavorable": 0
+        },
+        {
+          "intentId": "2026-03-20-1130-NAS100-SHORT-24297",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "swing",
+          "entry": 24296.673684210527,
+          "entryTs": 1774008900000,
+          "exit": 24148.0701754386,
+          "exitTs": 1774011600000,
+          "exitReason": "tp1",
+          "pnlPts": 148.6,
+          "pnlDollars": 4.46,
+          "durationMin": 45,
+          "maxAdverse": 4.33,
+          "maxFavorable": 195.67
+        },
+        {
+          "intentId": "2026-03-20-1215-NAS100-SHORT-24225",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "swing",
+          "entry": 24224.938215102975,
+          "entryTs": 1774010700000,
+          "exit": 24076.773455377574,
+          "exitTs": 1774025100000,
+          "exitReason": "tp1",
+          "pnlPts": 148.16,
+          "pnlDollars": 4.44,
+          "durationMin": 240,
+          "maxAdverse": 82.66,
+          "maxFavorable": 163.94
+        },
+        {
+          "intentId": "2026-03-20-1645-NAS100-SHORT-24012",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "swing",
+          "entry": 24011.82700228833,
+          "entryTs": 1774028700000,
+          "exit": 24100.257665903893,
+          "exitTs": 1774030500000,
+          "exitReason": "sl",
+          "pnlPts": -88.43,
+          "pnlDollars": -2.65,
+          "durationMin": 30,
+          "maxAdverse": 111.57,
+          "maxFavorable": 0
+        },
+        {
+          "intentId": "2026-03-20-1900-NAS100-SHORT-24063",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "swing",
+          "entry": 24062.710297482838,
+          "entryTs": 1774035000000,
+          "exit": 23915.537757437072,
+          "exitTs": 1774041300000,
+          "exitReason": "tp1",
+          "pnlPts": 147.17,
+          "pnlDollars": 4.42,
+          "durationMin": 105,
+          "maxAdverse": 17.49,
+          "maxFavorable": 167.01
+        },
+        {
+          "intentId": "2026-03-20-2030-NAS100-SHORT-23912",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "swing",
+          "entry": 23912.055835240277,
+          "entryTs": 1774041300000,
+          "exit": 23765.804729214342,
+          "exitTs": 1774045800000,
+          "exitReason": "tp1",
+          "pnlPts": 146.25,
+          "pnlDollars": 4.39,
+          "durationMin": 75,
+          "maxAdverse": 22.44,
+          "maxFavorable": 158.66
+        },
+        {
+          "intentId": "2026-03-20-2115-NAS100-SHORT-23872",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "swing",
+          "entry": 23872.4466819222,
+          "entryTs": 1774042200000,
+          "exit": 23960.451106025936,
+          "exitTs": 1774050300000,
+          "exitReason": "sl",
+          "pnlPts": -88,
+          "pnlDollars": -2.64,
+          "durationMin": 135,
+          "maxAdverse": 123.75,
+          "maxFavorable": 119.05
+        },
+        {
+          "intentId": "2026-03-20-2200-NAS100-SHORT-23813",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "swing",
+          "entry": 23812.78352402746,
+          "entryTs": 1774045800000,
+          "exit": 23900.60549199085,
+          "exitTs": 1774047600000,
+          "exitReason": "sl",
+          "pnlPts": -87.82,
+          "pnlDollars": -2.63,
+          "durationMin": 30,
+          "maxAdverse": 119.12,
+          "maxFavorable": 15.08
+        },
+        {
+          "intentId": "2026-03-20-2245-NAS100-SHORT-23840",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "swing",
+          "entry": 23840.02105263158,
+          "entryTs": 1774046700000,
+          "exit": 23927.926315789475,
+          "exitTs": 1774047600000,
+          "exitReason": "sl",
+          "pnlPts": -87.91,
+          "pnlDollars": -2.64,
+          "durationMin": 15,
+          "maxAdverse": 91.88,
+          "maxFavorable": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-03-23",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 23725,
+          "close": 24191.5,
+          "high": 24550.1,
+          "low": 23561.6
+        },
+        "US30": {
+          "open": 45242.7,
+          "close": 46214.7,
+          "high": 46913,
+          "low": 45159.8
+        },
+        "XAUUSD": {
+          "open": 4487.63,
+          "close": 4406.64,
+          "high": 4536.33,
+          "low": 4098.82
+        }
+      },
+      "totalTrades": 2,
+      "wins": 0,
+      "losses": 2,
+      "breakeven": 0,
+      "pnlDollars": -8,
+      "pnlByCfd": {
+        "NAS100": -8,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": -8,
+        "swing": 0
+      },
+      "trades": [
+        {
+          "intentId": "2026-03-23-0915-NAS100-SHORT-23571",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 23571.04740061162,
+          "entryTs": 1774260900000,
+          "exit": 23611.04740061162,
+          "exitTs": 1774261800000,
+          "exitReason": "sl",
+          "pnlPts": -40,
+          "pnlDollars": -4,
+          "durationMin": 15,
+          "maxAdverse": 53.85,
+          "maxFavorable": 0
+        },
+        {
+          "intentId": "2026-03-23-1900-NAS100-SHORT-24089",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 24088.86085626911,
+          "entryTs": 1774293300000,
+          "exit": 24128.86085626911,
+          "exitTs": 1774294200000,
+          "exitReason": "sl",
+          "pnlPts": -40,
+          "pnlDollars": -4,
+          "durationMin": 15,
+          "maxAdverse": 102.94,
+          "maxFavorable": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-03-24",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24199.1,
+          "close": 24195.9,
+          "high": 24338,
+          "low": 23926.6
+        },
+        "US30": {
+          "open": 46207.4,
+          "close": 46395.2,
+          "high": 46598.2,
+          "low": 45741.8
+        },
+        "XAUUSD": {
+          "open": 4419.92,
+          "close": 4474.53,
+          "high": 4484.4,
+          "low": 4305.42
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-03-25",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24233.1,
+          "close": 24161,
+          "high": 24332.8,
+          "low": 24081
+        },
+        "US30": {
+          "open": 46414.5,
+          "close": 46411.6,
+          "high": 46745.1,
+          "low": 46190.7
+        },
+        "XAUUSD": {
+          "open": 4476.62,
+          "close": 4506.28,
+          "high": 4602.42,
+          "low": 4456.14
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-03-26",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24148,
+          "close": 23618.7,
+          "high": 24216.5,
+          "low": 23559.6
+        },
+        "US30": {
+          "open": 46430.9,
+          "close": 46032.3,
+          "high": 46554,
+          "low": 45889.3
+        },
+        "XAUUSD": {
+          "open": 4517.37,
+          "close": 4378.37,
+          "high": 4544.03,
+          "low": 4351.28
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-03-27",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 23639.4,
+          "close": 23074.1,
+          "high": 23773.6,
+          "low": 23031.1
+        },
+        "US30": {
+          "open": 46070.8,
+          "close": 45053.7,
+          "high": 46237.9,
+          "low": 44997.6
+        },
+        "XAUUSD": {
+          "open": 4384.07,
+          "close": 4495.03,
+          "high": 4555.29,
+          "low": 4375.43
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-03-30",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 23024.9,
+          "close": 22909.3,
+          "high": 23371.1,
+          "low": 22832
+        },
+        "US30": {
+          "open": 44966.8,
+          "close": 45202.4,
+          "high": 45666.7,
+          "low": 44810.4
+        },
+        "XAUUSD": {
+          "open": 4486.25,
+          "close": 4511.01,
+          "high": 4580.57,
+          "low": 4419.91
+        }
+      },
+      "totalTrades": 10,
+      "wins": 4,
+      "losses": 6,
+      "breakeven": 0,
+      "pnlDollars": 1.2,
+      "pnlByCfd": {
+        "NAS100": 1.1999999999999984,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 4.859999999999999,
+        "intraday": -3.660000000000001,
+        "swing": 0
+      },
+      "trades": [
+        {
+          "intentId": "2026-03-30-0100-NAS100-SHORT-23038",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "scalp",
+          "entry": 23037.742681047766,
+          "entryTs": 1774833300000,
+          "exit": 22949.13597842835,
+          "exitTs": 1774837800000,
+          "exitReason": "tp1",
+          "pnlPts": 88.61,
+          "pnlDollars": 8.86,
+          "durationMin": 75,
+          "maxAdverse": 7.16,
+          "maxFavorable": 104.14
+        },
+        {
+          "intentId": "2026-03-30-0230-NAS100-SHORT-22996",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "scalp",
+          "entry": 22995.878274268103,
+          "entryTs": 1774840500000,
+          "exit": 23035.878274268103,
+          "exitTs": 1774841400000,
+          "exitReason": "sl",
+          "pnlPts": -40,
+          "pnlDollars": -4,
+          "durationMin": 15,
+          "maxAdverse": 49.92,
+          "maxFavorable": 41.28
+        },
+        {
+          "intentId": "2026-03-30-0315-NAS100-SHORT-23064",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 23064.38366718028,
+          "entryTs": 1774840500000,
+          "exit": 22975.674499229586,
+          "exitTs": 1774841400000,
+          "exitReason": "tp1",
+          "pnlPts": 88.71,
+          "pnlDollars": 8.87,
+          "durationMin": 15,
+          "maxAdverse": 0,
+          "maxFavorable": 109.78
+        },
+        {
+          "intentId": "2026-03-30-1300-NAS100-SHORT-23243",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 23242.75808936826,
+          "entryTs": 1774879200000,
+          "exit": 23282.75808936826,
+          "exitTs": 1774880100000,
+          "exitReason": "sl",
+          "pnlPts": -40,
+          "pnlDollars": -4,
+          "durationMin": 15,
+          "maxAdverse": 128.34,
+          "maxFavorable": 11.56
+        },
+        {
+          "intentId": "2026-03-30-1345-NAS100-SHORT-23254",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 23254.17565485362,
+          "entryTs": 1774880100000,
+          "exit": 23294.17565485362,
+          "exitTs": 1774881000000,
+          "exitReason": "sl",
+          "pnlPts": -40,
+          "pnlDollars": -4,
+          "durationMin": 15,
+          "maxAdverse": 56.82,
+          "maxFavorable": 0
+        },
+        {
+          "intentId": "2026-03-30-1645-NAS100-SHORT-23145",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 23145.208012326657,
+          "entryTs": 1774889100000,
+          "exit": 23185.208012326657,
+          "exitTs": 1774890000000,
+          "exitReason": "sl",
+          "pnlPts": -40,
+          "pnlDollars": -4,
+          "durationMin": 15,
+          "maxAdverse": 44.19,
+          "maxFavorable": 39.11
+        },
+        {
+          "intentId": "2026-03-30-1730-NAS100-SHORT-23116",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 23116.363636363636,
+          "entryTs": 1774891800000,
+          "exit": 23156.363636363636,
+          "exitTs": 1774892700000,
+          "exitReason": "sl",
+          "pnlPts": -40,
+          "pnlDollars": -4,
+          "durationMin": 15,
+          "maxAdverse": 70.24,
+          "maxFavorable": 37.96
+        },
+        {
+          "intentId": "2026-03-30-1815-NAS100-SHORT-23173",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 23173.05084745763,
+          "entryTs": 1774894500000,
+          "exit": 23213.05084745763,
+          "exitTs": 1774895400000,
+          "exitReason": "sl",
+          "pnlPts": -40,
+          "pnlDollars": -4,
+          "durationMin": 15,
+          "maxAdverse": 44.45,
+          "maxFavorable": 52.45
+        },
+        {
+          "intentId": "2026-03-30-2200-NAS100-SHORT-22888",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 22888.31278890601,
+          "entryTs": 1774908000000,
+          "exit": 22883.31278890601,
+          "exitTs": 1774909800000,
+          "exitReason": "trail",
+          "pnlPts": 5,
+          "pnlDollars": 0.5,
+          "durationMin": 30,
+          "maxAdverse": 6.79,
+          "maxFavorable": 56.31
+        },
+        {
+          "intentId": "2026-03-30-2245-NAS100-SHORT-22979",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 22978.95223420647,
+          "entryTs": 1774910700000,
+          "exit": 22909.3,
+          "exitTs": 1774914300000,
+          "exitReason": "eod",
+          "pnlPts": 69.65,
+          "pnlDollars": 6.97,
+          "durationMin": 60,
+          "maxAdverse": 0,
+          "maxFavorable": 80.15
+        }
+      ]
+    },
+    {
+      "date": "2026-03-31",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 22932.1,
+          "close": 23707.3,
+          "high": 23781.4,
+          "low": 22774.4
+        },
+        "US30": {
+          "open": 45214.8,
+          "close": 46302.8,
+          "high": 46385.5,
+          "low": 45045.4
+        },
+        "XAUUSD": {
+          "open": 4514.19,
+          "close": 4667.07,
+          "high": 4687.28,
+          "low": 4482.59
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-04-01",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 23705.5,
+          "close": 24001.3,
+          "high": 24158.4,
+          "low": 23692.4
+        },
+        "US30": {
+          "open": 46277.9,
+          "close": 46574.1,
+          "high": 46802.5,
+          "low": 46256.9
+        },
+        "XAUUSD": {
+          "open": 4681.82,
+          "close": 4758.08,
+          "high": 4793.04,
+          "low": 4661.61
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-04-02",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 23998.3,
+          "close": 24025.8,
+          "high": 24073.8,
+          "low": 23478
+        },
+        "US30": {
+          "open": 46565.9,
+          "close": 46493.7,
+          "high": 46737.5,
+          "low": 45827.5
+        },
+        "XAUUSD": {
+          "open": 4759.38,
+          "close": 4676.12,
+          "high": 4800.25,
+          "low": 4554.19
+        }
+      },
+      "totalTrades": 4,
+      "wins": 1,
+      "losses": 3,
+      "breakeven": 0,
+      "pnlDollars": -2.67,
+      "pnlByCfd": {
+        "NAS100": -2.67,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": -6.64,
+        "intraday": 3.9699999999999998,
+        "swing": 0
+      },
+      "trades": [
+        {
+          "intentId": "2026-04-02-0100-NAS100-SHORT-23980",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "scalp",
+          "entry": 23979.719772727276,
+          "entryTs": 1775091600000,
+          "exit": 24012.9,
+          "exitTs": 1775095200000,
+          "exitReason": "sl",
+          "pnlPts": -33.18,
+          "pnlDollars": -3.32,
+          "durationMin": 60,
+          "maxAdverse": 33.58,
+          "maxFavorable": 10.72
+        },
+        {
+          "intentId": "2026-04-02-0145-NAS100-SHORT-23963",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "scalp",
+          "entry": 23962.732651515154,
+          "entryTs": 1775094300000,
+          "exit": 23995.9,
+          "exitTs": 1775095200000,
+          "exitReason": "sl",
+          "pnlPts": -33.17,
+          "pnlDollars": -3.32,
+          "durationMin": 15,
+          "maxAdverse": 50.57,
+          "maxFavorable": 0
+        },
+        {
+          "intentId": "2026-04-02-0400-NAS100-SHORT-23934",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 23934.15431818182,
+          "entryTs": 1775102400000,
+          "exit": 23861.57159090909,
+          "exitTs": 1775103300000,
+          "exitReason": "tp1",
+          "pnlPts": 72.58,
+          "pnlDollars": 7.26,
+          "durationMin": 15,
+          "maxAdverse": 23.45,
+          "maxFavorable": 159.15
+        },
+        {
+          "intentId": "2026-04-02-0530-NAS100-SHORT-23664",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "intraday",
+          "entry": 23664.059090909093,
+          "entryTs": 1775107800000,
+          "exit": 23697,
+          "exitTs": 1775108700000,
+          "exitReason": "sl",
+          "pnlPts": -32.94,
+          "pnlDollars": -3.29,
+          "durationMin": 15,
+          "maxAdverse": 40.94,
+          "maxFavorable": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-04-03",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24018.2,
+          "close": 23944.5,
+          "high": 24068.4,
+          "low": 23920.3
+        },
+        "US30": {
+          "open": 46507.1,
+          "close": 46396.5,
+          "high": 46637,
+          "low": 46349.5
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-04-06",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 23885.6,
+          "close": 24167.8,
+          "high": 24273.3,
+          "low": 23804.1
+        },
+        "US30": {
+          "open": 46269.9,
+          "close": 46769.4,
+          "high": 46808.1,
+          "low": 46121.1
+        },
+        "XAUUSD": {
+          "open": 4631.66,
+          "close": 4650.64,
+          "high": 4706.42,
+          "low": 4600.63
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-04-07",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24178.2,
+          "close": 24226,
+          "high": 24275.7,
+          "low": 23767.4
+        },
+        "US30": {
+          "open": 46762.7,
+          "close": 46638.5,
+          "high": 46809.3,
+          "low": 46192
+        },
+        "XAUUSD": {
+          "open": 4658.51,
+          "close": 4705.59,
+          "high": 4718.39,
+          "low": 4607.68
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-04-08",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24370.4,
+          "close": 24870.5,
+          "high": 25085.1,
+          "low": 24201.9
+        },
+        "US30": {
+          "open": 46819.2,
+          "close": 47883.2,
+          "high": 48038.9,
+          "low": 46613.4
+        },
+        "XAUUSD": {
+          "open": 4747.06,
+          "close": 4719.07,
+          "high": 4857.02,
+          "low": 4699.81
+        }
+      },
+      "totalTrades": 2,
+      "wins": 1,
+      "losses": 1,
+      "breakeven": 0,
+      "pnlDollars": -2.85,
+      "pnlByCfd": {
+        "NAS100": -2.85,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": -2.85,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": [
+        {
+          "intentId": "2026-04-08-0100-NAS100-SHORT-24569",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "scalp",
+          "entry": 24569.30945537065,
+          "entryTs": 1775611800000,
+          "exit": 24602.796520423602,
+          "exitTs": 1775612700000,
+          "exitReason": "sl",
+          "pnlPts": -33.49,
+          "pnlDollars": -3.35,
+          "durationMin": 15,
+          "maxAdverse": 182.59,
+          "maxFavorable": 0
+        },
+        {
+          "intentId": "2026-04-08-0145-NAS100-SHORT-24873",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "scalp",
+          "entry": 24873.310665658093,
+          "entryTs": 1775614500000,
+          "exit": 24868.310665658093,
+          "exitTs": 1775616300000,
+          "exitReason": "trail",
+          "pnlPts": 5,
+          "pnlDollars": 0.5,
+          "durationMin": 30,
+          "maxAdverse": 17.49,
+          "maxFavorable": 33.91
+        }
+      ]
+    },
+    {
+      "date": "2026-04-09",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 24870.5,
+          "close": 25066.9,
+          "high": 25099.9,
+          "low": 24784.2
+        },
+        "US30": {
+          "open": 47850.9,
+          "close": 48165.4,
+          "high": 48320.8,
+          "low": 47667.6
+        },
+        "XAUUSD": {
+          "open": 4727.87,
+          "close": 4765.48,
+          "high": 4801.2,
+          "low": 4698.48
+        }
+      },
+      "totalTrades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 0,
+      "pnlByCfd": {
+        "NAS100": 0,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 0
+      },
+      "trades": []
+    },
+    {
+      "date": "2026-04-10",
+      "cfdOpenClose": {
+        "NAS100": {
+          "open": 25067.5,
+          "close": 25150,
+          "high": 25226.7,
+          "low": 25027.1
+        },
+        "US30": {
+          "open": 48154.2,
+          "close": 47934.1,
+          "high": 48277.9,
+          "low": 47838.8
+        },
+        "XAUUSD": {
+          "open": 4775.64,
+          "close": 4748.66,
+          "high": 4795.16,
+          "low": 4730.84
+        }
+      },
+      "totalTrades": 2,
+      "wins": 2,
+      "losses": 0,
+      "breakeven": 0,
+      "pnlDollars": 3.18,
+      "pnlByCfd": {
+        "NAS100": 3.1799999999999997,
+        "US30": 0,
+        "XAUUSD": 0
+      },
+      "pnlByMode": {
+        "scalp": 0,
+        "intraday": 0,
+        "swing": 3.1799999999999997
+      },
+      "trades": [
+        {
+          "intentId": "2026-04-10-0315-NAS100-SHORT-25125",
+          "cfd": "NAS100",
+          "direction": "SHORT",
+          "tradeMode": "swing",
+          "entry": 25125.073097211756,
+          "entryTs": 1775795400000,
+          "exit": 25120.073097211756,
+          "exitTs": 1775829600000,
+          "exitReason": "trail",
+          "pnlPts": 5,
+          "pnlDollars": 0.15,
+          "durationMin": 570,
+          "maxAdverse": 10.33,
+          "maxFavorable": 87.87
+        },
+        {
+          "intentId": "2026-04-10-1815-NAS100-LONG-25049",
+          "cfd": "NAS100",
+          "direction": "LONG",
+          "tradeMode": "swing",
+          "entry": 25049.163526752072,
+          "entryTs": 1775849400000,
+          "exit": 25150,
+          "exitTs": 1775864700000,
+          "exitReason": "eod",
+          "pnlPts": 100.84,
+          "pnlDollars": 3.03,
+          "durationMin": 255,
+          "maxAdverse": 0,
+          "maxFavorable": 105.44
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "totalEpisodes": 222888000,
+  "totalWins": 923583,
+  "totalLosses": 432505,
+  "trainWR": 68.10642082224753,
+  "testWR": 81.19732461533847,
+  "testWins": 54144,
+  "testLosses": 12538,
+  "lastUpdated": "2026-03-27T19:03:29Z",
+  "generalist": true,
+  "gpu": true
+}

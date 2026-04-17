@@ -1,0 +1,35 @@
+{
+  "weights": [
+    0.023362362719624375,
+    -0.07766548208326664,
+    -0.1636663406538108,
+    0.15748988003548645,
+    -0.017540935377644472,
+    -0.10315241666619354,
+    0.023908527975269565,
+    -0.133481664654336
+  ],
+  "bias": -0.18509975330430412,
+  "featureNames": [
+    "vrp",
+    "gammaSign",
+    "barSizeLog",
+    "riskReversal",
+    "rrDelta5d",
+    "vixLevel",
+    "ivRank",
+    "dayOfWeek"
+  ],
+  "trainingSamples": 688,
+  "accuracy": 0.6337209302325582,
+  "featureImportance": {
+    "vrp": 3.3,
+    "gammaSign": 11.1,
+    "barSizeLog": 23.4,
+    "riskReversal": 22.5,
+    "rrDelta5d": 2.5,
+    "vixLevel": 14.7,
+    "ivRank": 3.4,
+    "dayOfWeek": 19.1
+  }
+}

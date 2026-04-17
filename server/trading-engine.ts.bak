@@ -1,0 +1,3942 @@
+/**
+ * Trading Engine v3 - Intraday CFD Trading System
+ * Based on options structure, dealer positioning, institutional flow, and vanna mechanics.
+ *
+ * Key principles:
+ * 1. Levels are "decision zones" (not support/resistance)
+ * 2. Cross-asset analysis: SPX+SPY+QQQ → NAS100, SPX+SPY+DIA → US30, GLD → XAUUSD
+ * 3. 6 confirmations: GEX 0DTE, HIRO, Nivel/Outlier, Tape, Vanna, Regimen SG
+ * 4. Official SpotGamma levels (Call Wall, Put Wall, Key Gamma, Vol Trigger, Implied Move)
+ * 5. Vanna trades: VIX→indices, GLD IV→gold, UVXY→refuge flow
+ * 6. Dynamic SL/TP in CFD prices (NAS100, US30, XAUUSD)
+ * 7. Risk management: $5-$10 max risk with user's lot sizes
+ * 8. Trade types: Gamma, Vanna, Refuge
+ */
+
+import type {
+  AssetData,
+  GexData,
+  HiroData,
+  TapeData,
+  TraceData,
+  StrikeData,
+  OfficialSGLevels,
+  VannaContext,
+  CFDPriceData,
+  TradierGexData,
+} from "./spotgamma-scraper";
+import {
+  updateSessionPrice,
+  getSessionTrend,
+  getImpliedMoveStatus,
+  getGapContext,
+  trackLevelTouch,
+  getLevelFreshness,
+  getMacroAlert,
+  getCachedDXYTLT,
+  refreshDXYTLT,
+} from "./session-tracker";
+// RL-Agent removed: PPO Multi-Head is now the only decision maker (Fase 2: PPO Puro)
+import { fetchTwelveSeries, detectCandleSignal, candleRewardMultiplier } from "./spotgamma-scraper";
+import type { CandleSignal } from "./spotgamma-scraper";
+import { getPPOAgent, ensurePPOLoaded, buildPPOState, normalizeState, PPO_ACTION_LABELS, parseAction } from "./ppo-agent";
+import type { PPOState } from "./ppo-agent";
+import { getMultiHeadAgent, ensureMultiHeadLoaded, buildPPOState as mhBuildPPOState, type MultiHeadDecision } from "./ppo-multihead";
+import { isModelLoaded as isMHInferenceLoaded, predict as mhInferencePredict, normalizeForInference, type MHInferenceResult } from "./ppo-inference";
+
+// ── Candle signal cache (refreshed async, read sync) ─────────────────────────
+const _candleCache: Record<string, { signal: CandleSignal; ts: number }> = {};
+
+export function refreshCandleSignals(): void {
+  const today = new Date().toISOString().slice(0, 10);
+  for (const [cfd, sym] of [["NAS100","SPX"],["US30","DIA"],["XAUUSD","GLD"]] as const) {
+    fetchTwelveSeries(sym, today, "5min").then(bars => {
+      if (bars.length >= 2) {
+        _candleCache[cfd] = { signal: detectCandleSignal(bars, 4), ts: Date.now() };
+        console.log(`[CANDLE] ${sym}: ${_candleCache[cfd].signal} (${bars.length} bars)`);
+      }
+    }).catch(() => {});
+  }
+}
+
+function getCachedCandleSignal(cfd: string): CandleSignal {
+  const c = _candleCache[cfd];
+  if (!c) return "neutral";
+  // Expire after 10 minutes
+  if (Date.now() - c.ts > 600_000) return "neutral";
+  return c.signal;
+}
+
+// ============ CFD SPECIFICATIONS ============
+
+export interface CFDSpec {
+  cfd: string;
+  label: string;
+  lotSize: number;         // User's lot size
+  valuePerPoint: number;   // $ per point at user's lot size
+  maxRiskUSD: number;      // Max risk in dollars
+  maxSLPoints: number;     // Max SL in CFD points for $10 risk
+  minSLPoints: number;     // Min SL in CFD points for $5 risk
+  // Conversion from analysis asset to CFD
+  betaVsSPX: number;       // Beta multiplier vs SPX
+}
+
+export const CFD_SPECS: Record<string, CFDSpec> = {
+  NAS100: {
+    cfd: "NAS100", label: "NASDAQ 100 CFD",
+    lotSize: 0.1, valuePerPoint: 0.10,
+    maxRiskUSD: 10, maxSLPoints: 100, minSLPoints: 50,
+    betaVsSPX: 1.5,
+  },
+  US30: {
+    cfd: "US30", label: "US30 (Dow Jones) CFD",
+    lotSize: 0.1, valuePerPoint: 0.10,   // 0.1 lot → $0.10/pt
+    maxRiskUSD: 10, maxSLPoints: 100, minSLPoints: 30,
+    betaVsSPX: 0.9,
+  },
+  XAUUSD: {
+    cfd: "XAUUSD", label: "XAUUSD (Oro) CFD",
+    lotSize: 0.01, valuePerPoint: 1.00, // $1 per $1 move
+    maxRiskUSD: 10, maxSLPoints: 50, minSLPoints: 10,
+    betaVsSPX: 0, // Independent
+  },
+};
+
+// Map analysis assets to CFD instruments
+export const ASSET_TO_CFD: Record<string, string> = {
+  SPX: "NAS100", SPY: "NAS100", QQQ: "NAS100",
+  DIA: "US30",
+  GLD: "XAUUSD",
+};
+
+// Assets that use SPX TRACE 0DTE GEX for classifyDecisionLevels bias scoring
+// DIA and GLD use their own SpotGamma chart GEX (via etfGex) — NOT SPX GEX
+export const GEX_ELIGIBLE_ASSETS = ["SPX", "SPY", "QQQ"];
+
+// ============ FIX 9: CACHED ET TIME ============
+
+/** Cached ET time info for current cycle — avoids recalculating EDT/EST in every function */
+interface ETTimeInfo {
+  etH: number;
+  etMins: number;
+  dow: number;    // 0=Sun..6=Sat
+  isEDT: boolean;
+  utcH: number;
+  utcM: number;
+  day: number;
+  month: number;
+  year: number;
+}
+
+function getETTime(now?: Date): ETTimeInfo {
+  const d = now || new Date();
+  const utcH = d.getUTCHours();
+  const utcM = d.getUTCMinutes();
+  const y = d.getUTCFullYear();
+  const mo = d.getUTCMonth() + 1;
+  const day = d.getUTCDate();
+  const dow = d.getUTCDay();
+
+  let isEDT = mo > 3 && mo < 11;
+  if (mo === 3) {
+    let cnt = 0, sun2 = 0;
+    for (let i = 1; i <= 31; i++) {
+      const dt = new Date(Date.UTC(y, 2, i));
+      if (dt.getUTCMonth() !== 2) break;
+      if (dt.getUTCDay() === 0 && ++cnt === 2) { sun2 = i; break; }
+    }
+    isEDT = day > sun2 || (day === sun2 && utcH >= 7);
+  } else if (mo === 11) {
+    let sun1 = 0;
+    for (let i = 1; i <= 7; i++) { if (new Date(Date.UTC(y, 10, i)).getUTCDay() === 0) { sun1 = i; break; } }
+    isEDT = day < sun1 || (day === sun1 && utcH < 6);
+  }
+
+  const etH = ((utcH + (isEDT ? -4 : -5)) % 24 + 24) % 24;
+  const etMins = etH * 60 + utcM;
+
+  return { etH, etMins, dow, isEDT, utcH, utcM, day, month: mo, year: y };
+}
+
+// Cross-asset groups for consensus analysis
+const CROSS_ASSET_GROUPS: Record<string, { assets: string[]; cfd: string; requiredConsensus: number }> = {
+  NAS100: { assets: ["SPX", "SPY", "QQQ"], cfd: "NAS100", requiredConsensus: 1 },
+  US30: { assets: ["SPX", "SPY", "DIA"], cfd: "US30", requiredConsensus: 2 },
+  XAUUSD: { assets: ["GLD"], cfd: "XAUUSD", requiredConsensus: 1 },
+};
+
+// ============ TYPES ============
+
+export type LevelHierarchy = "minor" | "reaction" | "dominant";
+export type TradeType = "gamma" | "breakout" | "bounce" | "vanna_index" | "vanna_gold" | "refuge" | "cross_asset" | "im_exhaustion" | "opex_pin" | "hiro_divergence" | "gamma_squeeze" | "charm_flow" | "news_reaction";
+
+export interface DecisionLevel {
+  strike: number;
+  hierarchy: LevelHierarchy;
+  bias: "buy" | "sell" | "neutral";
+  biasScore: number;
+  gammaNotional: number;
+  callGammaNotional: number;
+  putGammaNotional: number;
+  outlierScore: number;
+  distanceFromPrice: number;
+  distancePct: number;
+  isNearPrice: boolean;
+  dealerExposure: "long_gamma" | "short_gamma" | "neutral";
+  netPositioning: number;
+  flowBias: "bullish" | "bearish" | "neutral";
+  // Confluence with official SG levels
+  confluenceWithSG: boolean;
+  sgLevelType: string; // "Call Wall", "Put Wall", "Key Gamma", etc.
+  // Top strike priority (highest absolute gamma near price)
+  isTopStrike: boolean;
+  topStrikeRank?: number;  // 1, 2 or 3
+  // Cross-asset origin (SPY/QQQ strike converted to primary space)
+  isCrossAsset?: boolean;
+  companionAbsDist?: number;  // distancia absoluta en dólares del strike al precio del companion
+}
+
+export interface VannaSignal {
+  detected: boolean;
+  type: "bullish_vanna" | "bearish_vanna" | "none";
+  description: string;
+  strength: "strong" | "moderate" | "weak" | "none";
+  volDropping: boolean;
+  priceRising: boolean;
+  dealersMustBuyFutures: boolean;
+}
+
+export interface VolatilityAnalysis {
+  asset: string;
+  volatilitySource: string;
+  currentVol: number;
+  volChange: number;
+  volChangePct: number;
+  volLevel: "extreme_fear" | "elevated" | "normal" | "low" | "complacent";
+  isExpanding: boolean;
+  vannaSignal: VannaSignal;
+  description: string;
+}
+
+export interface CrossAssetConsensus {
+  cfd: string;
+  direction: "LONG" | "SHORT" | "NEUTRAL";
+  assetsAnalyzed: string[];
+  bullishCount: number;
+  bearishCount: number;
+  neutralCount: number;
+  consensusStrength: "strong" | "moderate" | "weak" | "none";
+  details: string[];
+}
+
+export interface TradeSetup {
+  asset: string;           // Primary analysis asset
+  cfd: string;             // CFD to trade (NAS100, US30, XAUUSD)
+  cfdLabel: string;
+  tradeType: TradeType;    // NEW: Type of trade
+  direction: "LONG" | "SHORT" | "NO_TRADE";
+  score: number;           // 0-100
+
+  // Entry in CFD price
+  entryPrice: number;      // Analysis asset price
+  cfdEntryPrice: number;   // NEW: CFD price for execution
+  entryZone: DecisionLevel | null;
+
+  // Dynamic SL/TP in CFD prices
+  stopLoss: number;        // In CFD price
+  stopLossPoints: number;  // In CFD points
+  stopLossRiskUSD: number; // Risk in dollars
+  stopLossReason: string;
+  takeProfit1: number;     // In CFD price
+  takeProfit1Points: number;
+  takeProfit2: number;     // In CFD price
+  takeProfit2Points: number;
+  takeProfit3: number;     // NEW: Third TP for runners
+  takeProfit3Points: number;
+  takeProfitReason: string;
+  riskRewardRatio: number;
+
+  // Trade management
+  breakEvenTrigger: number;
+  trailingStopTrigger: number;
+
+  // Trailing stop configuration (Mejora A)
+  trailingStopConfig?: {
+    tp1LockSL: number;         // SL level cuando toca TP1 (= entry price, breakeven)
+    midTP1TP2LockSL: number;   // SL cuando llega a 50% de TP1→TP2 (= TP1)
+    tp2TrailPct: number;       // % de trailing cuando supera TP2 (ej: 0.3 = 30% del rango TP1-TP2)
+  };
+
+  // 6 Confirmations
+  gexConfirmed: boolean;
+  gexDetail: string;
+  hiroConfirmed: boolean;
+  hiroDetail: string;
+  tapeConfirmed: boolean;
+  tapeDetail: string;
+  levelConfirmed: boolean;  // Outlier/level near price
+  levelDetail: string;
+  vannaConfirmed: boolean;  // NEW: Vanna flow confirms
+  vannaDetail: string;
+  regimeConfirmed: boolean; // NEW: Gamma regime confirms
+  regimeDetail: string;
+
+  // Cross-asset consensus
+  crossAssetConsensus: CrossAssetConsensus | null;
+
+  // Official SG Levels context
+  sgLevels: {
+    callWall: number;
+    putWall: number;
+    keyGamma: number;
+    maxGamma: number;
+    volTrigger: number;
+    impliedMove: number;
+    impliedMovePct: number;
+    gammaRegime: string;
+  } | null;
+
+  // Vanna context
+  vannaSignal: VannaSignal;
+
+  // Dynamic TP adjustment (from GEX change tracker)
+  dynamicTP: {
+    shouldAdjust: boolean;
+    reason: string;
+    action: "hold" | "tighten_tp" | "extend_tp" | "close_now" | "move_to_breakeven";
+    adjustedTP1: number;  // Adjusted TP1 in CFD price (0 = no change)
+    adjustedTP2: number;  // Adjusted TP2 in CFD price (0 = no change)
+    confidence: number;   // 0-100
+    lastChecked: string;
+  };
+
+  // Setup invalidation triggers
+  invalidation: {
+    gammaFlipLevel: number;    // Analysis price: setup invalid if crossed
+    gammaFlipCFD: number;      // CFD price equivalent of gamma flip
+    hiroReversed: boolean;     // HIRO currently against direction
+    vixDangerLevel: number;    // VIX above this = danger for LONG indices
+    conditions: string[];      // Human-readable invalidation conditions
+  };
+
+  // GEX strength at nearest level
+  gexStrengthScore: number;   // 0-100: how strong is the GEX at the nearest level
+
+  // Volatility intelligence
+  ivRegime: "high_iv" | "normal_iv" | "low_iv";
+  ivRank: number;
+  skewBias: "put_skew" | "call_skew" | "neutral";
+  highVolPoint: number;
+  lowVolPoint: number;
+  atmIV30: number;
+  rv30: number;
+  vrp: number;
+
+  // Entry mode & quality (session filter + candle/distance confirmation)
+  entryMode: "ENTRADA" | "VIGILANCIA" | "NO_OPERAR";
+  entryQuality: "optimal" | "valid" | "caution" | "watch";
+  entryNote: string;      // Human-readable entry quality explanation
+  sessionLabel: string;   // e.g. "Almuerzo NY 10:30-13:30 CO"
+
+  // OPEX context (Mejora C)
+  opexContext?: {
+    isWeeklyOPEX: boolean;
+    isMonthlyOPEX: boolean;
+    is0DTEOPEX: boolean;
+    opexType: string;
+    thresholdBoost: number;
+  };
+
+  // RL Adaptive Policy (multi-table Q-learning)
+  adaptivePolicy?: {
+    riskProfile: string;
+    slMultiplier: number;
+    tp1Pct: number;
+    tp2Pct: number;
+    tp3Pct: number;
+    entryMode: string;
+    setupTypeFilter: string;
+    volumeMultiplier: number;
+    confidence: number;
+    isExploring: boolean;
+    rlDirectionAction?: number;   // 0=LONG, 1=SHORT, 2=SKIP
+    rlMarketStateKey?: string;    // 6-dim key for direction table (tape+hiro)
+    // PPO Multi-Head decision tracking (Fase 2 PPO Puro)
+    ppoStateAtEntry?: Record<string, number>;  // 46-feature state for learning
+    ppoHeadActions?: Record<string, number>;   // Head choices for learning
+    ppoHeadLogProbs?: Record<string, number>;  // Log probs for REINFORCE
+  };
+
+  // Context
+  reason: string;
+  details: string[];
+  nearestLevels: DecisionLevel[];
+  timestamp: string;
+}
+
+// ============ LEVEL CLASSIFICATION ============
+
+export function classifyDecisionLevels(
+  asset: AssetData,
+  gex: GexData | null,
+  sgLevels: OfficialSGLevels | null,
+): DecisionLevel[] {
+  const levels: DecisionLevel[] = [];
+  const price = asset.currentPrice;
+  if (!price || price === 0) return levels;
+
+  const hasGex = GEX_ELIGIBLE_ASSETS.includes(asset.symbol);
+  const gammaFlip = asset.gammaFlipLevel || 0;
+
+  const candidates = asset.strikes
+    .filter((s) => s.isNearPrice && Math.abs(s.totalGamma) > 0)
+    .sort((a, b) => Math.abs(b.totalGamma) - Math.abs(a.totalGamma));
+
+  if (candidates.length === 0) return levels;
+
+  const gammaValues = candidates.map((s) => Math.abs(s.totalGamma));
+  const mean = gammaValues.reduce((a, b) => a + b, 0) / gammaValues.length;
+  const stdDev = Math.sqrt(
+    gammaValues.reduce((sum, v) => sum + (v - mean) ** 2, 0) / gammaValues.length,
+  );
+
+  // Build top strike set for priority detection
+  const topStrikeSet = new Map<number, number>(); // strike → rank (1, 2, 3)
+  for (let i = 0; i < asset.topStrikes.length; i++) {
+    topStrikeSet.set(asset.topStrikes[i].strike, i + 1);
+  }
+
+  // Build set of official SG level strikes for confluence detection
+  const sgStrikes: Map<number, string> = new Map();
+  if (sgLevels) {
+    if (sgLevels.callWall > 0) sgStrikes.set(sgLevels.callWall, "Call Wall");
+    if (sgLevels.putWall > 0) sgStrikes.set(sgLevels.putWall, "Put Wall");
+    if (sgLevels.keyGamma > 0) sgStrikes.set(sgLevels.keyGamma, "Key Gamma");
+    if (sgLevels.maxGamma > 0) sgStrikes.set(sgLevels.maxGamma, "Max Gamma");
+    if (sgLevels.keyDelta > 0) sgStrikes.set(sgLevels.keyDelta, "Key Delta");
+    if (sgLevels.volTrigger > 0) sgStrikes.set(sgLevels.volTrigger, "Vol Trigger");
+    if (sgLevels.zeroGamma > 0) sgStrikes.set(sgLevels.zeroGamma, "Zero Gamma");
+  }
+
+  for (const strike of candidates) {
+    const absGamma = Math.abs(strike.totalGamma);
+    const distPct = strike.distancePct;
+
+    let hierarchy: LevelHierarchy = "minor";
+    if (absGamma > mean + 2 * stdDev) {
+      hierarchy = "dominant";
+    } else if (absGamma > mean + stdDev) {
+      hierarchy = "reaction";
+    }
+
+    let bias: "buy" | "sell" | "neutral" = "neutral";
+    let biasScore = 50;
+
+    // Apply gammaFlip bias if asset has a valid flip level (works for SPX, DIA, GLD — any asset)
+    if (gammaFlip > 0) {
+      if (price < gammaFlip) {
+        if (strike.strike < price) biasScore -= 15;
+        else biasScore -= 10;
+      } else {
+        if (strike.strike < price) biasScore += 15;
+        else biasScore += 10;
+      }
+    }
+
+    if (strike.netPosTotal > 0) {
+      if (strike.netPosCalls > strike.netPosPuts) biasScore += 10;
+      else biasScore -= 10;
+    } else if (strike.netPosTotal < 0) {
+      if (Math.abs(strike.netPosPuts) > Math.abs(strike.netPosCalls)) biasScore += 5;
+      else biasScore -= 5;
+    }
+
+    const callDominance =
+      Math.abs(strike.callGammaNotional) /
+      (Math.abs(strike.callGammaNotional) + Math.abs(strike.putGammaNotional) || 1);
+    if (callDominance > 0.6) biasScore += 8;
+    else if (callDominance < 0.4) biasScore -= 8;
+
+    biasScore = Math.max(0, Math.min(100, biasScore));
+    if (biasScore >= 60) bias = "buy";
+    else if (biasScore <= 40) bias = "sell";
+
+    // Dealer exposure: any asset with a valid gammaFlip gets long/short gamma label
+    let dealerExposure: DecisionLevel["dealerExposure"] = "neutral";
+    if (gammaFlip > 0) {
+      dealerExposure = price > gammaFlip ? "long_gamma" : "short_gamma";
+    }
+
+    let flowBias: "bullish" | "bearish" | "neutral" = "neutral";
+    if (strike.netPosCalls > 0 && strike.netPosCalls > Math.abs(strike.netPosPuts)) flowBias = "bullish";
+    else if (strike.netPosPuts > 0 && strike.netPosPuts > Math.abs(strike.netPosCalls)) flowBias = "bearish";
+
+    // Check confluence with official SG levels (within 0.3% tolerance)
+    let confluenceWithSG = false;
+    let sgLevelType = "";
+    for (const [sgStrike, sgType] of Array.from(sgStrikes.entries())) {
+      const tolerance = price * 0.003; // 0.3%
+      if (Math.abs(strike.strike - sgStrike) <= tolerance) {
+        confluenceWithSG = true;
+        sgLevelType = sgType;
+        // Boost hierarchy if confluent with SG level
+        if (hierarchy === "minor") hierarchy = "reaction";
+        else if (hierarchy === "reaction") hierarchy = "dominant";
+
+        // Extra boost when gamma_ratio confirms dominance at this specific level
+        const gammaRatio = sgLevels?.gammaRatio || 1;
+        if (sgType === "Call Wall" && gammaRatio > 1.5) {
+          // Call gamma dominates → Call Wall is extra strong ceiling
+          hierarchy = "dominant";
+          sgLevelType = `Call Wall (gamma_ratio ${gammaRatio.toFixed(2)} - calls dominan)`;
+        } else if (sgType === "Put Wall" && gammaRatio < 0.67) {
+          // Put gamma dominates → Put Wall is extra strong floor
+          hierarchy = "dominant";
+          sgLevelType = `Put Wall (gamma_ratio ${gammaRatio.toFixed(2)} - puts dominan)`;
+        }
+        break;
+      }
+    }
+
+    // Boost for top strikes (highest absolute gamma near price)
+    const topRank = topStrikeSet.get(strike.strike);
+    const isTop = topRank !== undefined;
+    if (isTop) {
+      if (topRank === 1) {
+        // #1 top strike: force dominant
+        hierarchy = "dominant";
+      } else {
+        // #2, #3: boost one tier
+        if (hierarchy === "minor") hierarchy = "reaction";
+        else if (hierarchy === "reaction") hierarchy = "dominant";
+      }
+    }
+
+    levels.push({
+      strike: strike.strike,
+      hierarchy, bias, biasScore,
+      gammaNotional: strike.totalGamma,
+      callGammaNotional: strike.callGammaNotional,
+      putGammaNotional: strike.putGammaNotional,
+      outlierScore: strike.outlierScore,
+      distanceFromPrice: strike.distanceFromPrice,
+      distancePct: strike.distancePct,
+      isNearPrice: strike.isNearPrice,
+      dealerExposure, netPositioning: strike.netPosTotal, flowBias,
+      confluenceWithSG, sgLevelType,
+      isTopStrike: isTop,
+      topStrikeRank: topRank,
+    });
+  }
+
+  return levels.sort((a, b) => a.distanceFromPrice - b.distanceFromPrice);
+}
+
+// ============ VANNA TRADE DETECTION ============
+
+export function detectVannaFlow(
+  asset: AssetData,
+  volAnalysis: VolatilityAnalysis,
+): VannaSignal {
+  const priceRising = asset.dailyChangePct > 0;
+  const priceFalling = asset.dailyChangePct < 0;
+  const volDropping = volAnalysis.volChangePct < -1;
+  const volRising = volAnalysis.volChangePct > 1;
+
+  if (volDropping && priceRising) {
+    const strength = volAnalysis.volChangePct < -3 ? "strong" : volAnalysis.volChangePct < -2 ? "moderate" : "weak";
+    return {
+      detected: true, type: "bullish_vanna",
+      description: `Vanna ALCISTA: Vol cae ${Math.abs(volAnalysis.volChangePct).toFixed(1)}% + precio sube ${asset.dailyChangePct.toFixed(2)}%. Dealers compran futuros.`,
+      strength, volDropping: true, priceRising: true, dealersMustBuyFutures: true,
+    };
+  }
+
+  if (volRising && priceFalling) {
+    const strength = volAnalysis.volChangePct > 3 ? "strong" : volAnalysis.volChangePct > 2 ? "moderate" : "weak";
+    return {
+      detected: true, type: "bearish_vanna",
+      description: `Vanna BAJISTA: Vol sube ${volAnalysis.volChangePct.toFixed(1)}% + precio cae ${Math.abs(asset.dailyChangePct).toFixed(2)}%. Dealers venden futuros.`,
+      strength, volDropping: false, priceRising: false, dealersMustBuyFutures: false,
+    };
+  }
+
+  return {
+    detected: false, type: "none",
+    description: "Sin flujo Vanna significativo.",
+    strength: "none", volDropping, priceRising, dealersMustBuyFutures: false,
+  };
+}
+
+// ============ VOLATILITY ANALYSIS ============
+
+export function analyzeVolatility(
+  asset: AssetData,
+  vixAsset: AssetData | null,
+  uvixAsset: AssetData | null,
+): VolatilityAnalysis {
+  const isGold = asset.symbol === "GLD";
+  const isIndex = ["SPX", "SPY", "QQQ", "DIA"].includes(asset.symbol);
+
+  let volSource = "VIX";
+  let volPrice = vixAsset?.currentPrice || 0;
+  let volChange = vixAsset?.dailyChange || 0;
+  let volChangePct = vixAsset?.dailyChangePct || 0;
+
+  if (isGold) {
+    volSource = "GLD IV";
+    // For gold, use its own IV change (from equities API)
+    // Fallback to UVXY if no IV data
+    if (uvixAsset) {
+      volPrice = uvixAsset.currentPrice;
+      volChange = uvixAsset.dailyChange;
+      volChangePct = uvixAsset.dailyChangePct;
+      volSource = "UVXY";
+    }
+  }
+
+  let volLevel: VolatilityAnalysis["volLevel"] = "normal";
+  if (volPrice > 35) volLevel = "extreme_fear";
+  else if (volPrice > 25) volLevel = "elevated";
+  else if (volPrice > 15) volLevel = "normal";
+  else if (volPrice > 12) volLevel = "low";
+  else volLevel = "complacent";
+
+  const isExpanding = volChangePct > 0;
+
+  const volAnalysisPartial: VolatilityAnalysis = {
+    asset: asset.symbol, volatilitySource: volSource,
+    currentVol: volPrice, volChange, volChangePct, volLevel, isExpanding,
+    vannaSignal: { detected: false, type: "none", description: "", strength: "none", volDropping: false, priceRising: false, dealersMustBuyFutures: false },
+    description: "",
+  };
+
+  const vannaSignal = detectVannaFlow(asset, volAnalysisPartial);
+
+  const description =
+    `${volSource}: ${volPrice.toFixed(2)} (${volChangePct > 0 ? "+" : ""}${volChangePct.toFixed(1)}%). ` +
+    `Nivel: ${volLevel.replace("_", " ").toUpperCase()}. ` +
+    (vannaSignal.detected ? vannaSignal.description : "Sin Vanna flow.");
+
+  return { ...volAnalysisPartial, vannaSignal, description };
+}
+
+// ============ CROSS-ASSET STRIKE LEVELS (SPY/QQQ → SPX-equivalent) ============
+
+/**
+ * Adds gamma levels from companion assets (SPY, QQQ) to the NAS100/US30 level pool.
+ *
+ * Proximity is evaluated in each companion's OWN price scale — this is the only
+ * accurate way to answer "is the market near this gamma level?":
+ *   - Converting QQQ $585 → SPX $6,540 introduces ratio drift error (~50-100 pts on gap days).
+ *   - Checking |$585 - QQQ_live| / QQQ_live directly has zero conversion error.
+ *
+ * QQQ levels are especially reliable for NAS100 because both track Nasdaq-100.
+ * SPY levels are reliable for direction signal; their SPX-equivalent is stable (~10x).
+ *
+ * The strike stored in DecisionLevel is kept in primary (SPX/DIA) space so the rest
+ * of the engine (biasScore, SL/TP conversion) stays consistent. distancePct is set
+ * from the companion's own scale — the number that actually matters for entry quality.
+ */
+function getCrossAssetDecisionLevels(
+  primaryAsset: AssetData,
+  companionAssets: AssetData[],
+): DecisionLevel[] {
+  const extra: DecisionLevel[] = [];
+  const primaryPrice = primaryAsset.currentPrice;
+  if (!primaryPrice) return extra;
+
+  for (const companion of companionAssets) {
+    if (!companion.currentPrice || companion.symbol === primaryAsset.symbol) continue;
+
+    const companionPrice = companion.currentPrice;
+    const ratio          = primaryPrice / companionPrice; // e.g. SPX/SPY ≈ 10, SPX/QQQ ≈ 11.2
+
+    const topStrikes = [...(companion.outlierStrikes || []), ...(companion.topStrikes || [])].slice(0, 5);
+
+    for (const s of topStrikes) {
+      // ── Proximity check in companion's OWN scale ──────────────────────────
+      // This avoids ratio-drift errors that appear on gap days or tech-rotation days.
+      const companionDist    = Math.abs(s.strike - companionPrice);
+      const companionDistPct = (companionDist / companionPrice) * 100;
+      if (companionDist > 2.0) continue; // pre-filtro generoso: solo excluye niveles a más de $2 del precio
+
+      // ── Convert strike to primary space (SPX/DIA) for engine consistency ──
+      const normalizedStrike = s.strike * ratio;
+      const distFromPrimary  = Math.abs(normalizedStrike - primaryPrice);
+
+      extra.push({
+        strike: normalizedStrike,
+        hierarchy: s.isOutlier ? "dominant" : "reaction",
+        bias: "neutral",
+        biasScore: 50,
+        gammaNotional:      s.totalGamma,
+        callGammaNotional:  s.callGammaNotional,
+        putGammaNotional:   s.putGammaNotional,
+        outlierScore:       s.outlierScore || 0,
+        distanceFromPrice:  distFromPrimary,
+        distancePct:        companionDistPct,
+        isNearPrice:        companionDist <= 0.5,
+        dealerExposure:     "neutral",
+        netPositioning:     s.netPosTotal || 0,
+        flowBias:           "neutral",
+        confluenceWithSG:   false,
+        isTopStrike:        false,
+        isCrossAsset:       true,
+        companionAbsDist:   companionDist,  // dólares exactos entre strike y precio del companion
+        sgLevelType: `${companion.symbol} $${s.strike} (×${ratio.toFixed(1)} → SPX ~$${normalizedStrike.toFixed(0)})`,
+      });
+    }
+  }
+
+  return extra;
+}
+
+// ============ CROSS-ASSET CONSENSUS ============
+
+function buildCrossAssetConsensus(
+  cfdTarget: string,
+  assets: AssetData[],
+  gex: GexData | null,
+  hiro: HiroData | null,
+  sgLevels: Record<string, OfficialSGLevels>,
+): CrossAssetConsensus | null {
+  const group = CROSS_ASSET_GROUPS[cfdTarget];
+  if (!group) return null;
+
+  let bullishCount = 0;
+  let bearishCount = 0;
+  let neutralCount = 0;
+  const details: string[] = [];
+  const assetsAnalyzed: string[] = [];
+
+  for (const sym of group.assets) {
+    const asset = assets.find(a => a.symbol === sym);
+    if (!asset || asset.currentPrice === 0) continue;
+    assetsAnalyzed.push(sym);
+
+    let assetBias: "bullish" | "bearish" | "neutral" = "neutral";
+    const reasons: string[] = [];
+
+    // Factor 1: HIRO direction
+    const hiroData = hiro?.perAsset?.[sym];
+    if (hiroData) {
+      if (hiroData.hiroTrend === "bullish") { reasons.push("HIRO+"); assetBias = "bullish"; }
+      else if (hiroData.hiroTrend === "bearish") { reasons.push("HIRO-"); assetBias = "bearish"; }
+    }
+
+    // Factor 2: Gamma regime
+    const levels = sgLevels[sym];
+    if (levels) {
+      if (levels.gammaRegime === "positive") {
+        reasons.push("Gamma+");
+        if (assetBias === "neutral") assetBias = "bullish";
+      } else if (levels.gammaRegime === "very_negative") {
+        reasons.push("Gamma--");
+        if (assetBias === "neutral") assetBias = "bearish";
+      }
+    }
+
+    // Factor 3: Price vs key levels
+    if (asset.dailyChangePct > 0.3) { reasons.push(`+${asset.dailyChangePct.toFixed(1)}%`); }
+    else if (asset.dailyChangePct < -0.3) { reasons.push(`${asset.dailyChangePct.toFixed(1)}%`); }
+
+    if (assetBias === "bullish") bullishCount++;
+    else if (assetBias === "bearish") bearishCount++;
+    else neutralCount++;
+
+    details.push(`${sym}: ${assetBias.toUpperCase()} (${reasons.join(", ") || "neutral"})`);
+  }
+
+  const total = bullishCount + bearishCount + neutralCount;
+  let direction: CrossAssetConsensus["direction"] = "NEUTRAL";
+  let consensusStrength: CrossAssetConsensus["consensusStrength"] = "none";
+
+  if (bullishCount >= group.requiredConsensus && bullishCount > bearishCount) {
+    direction = "LONG";
+    consensusStrength = bullishCount === total ? "strong" : bullishCount >= total - 1 ? "moderate" : "weak";
+  } else if (bearishCount >= group.requiredConsensus && bearishCount > bullishCount) {
+    direction = "SHORT";
+    consensusStrength = bearishCount === total ? "strong" : bearishCount >= total - 1 ? "moderate" : "weak";
+  }
+
+  return { cfd: cfdTarget, direction, assetsAnalyzed, bullishCount, bearishCount, neutralCount, consensusStrength, details };
+}
+
+// ============ BREAKOUT DETECTION ============
+//
+// In negative/very_negative gamma regime, dealers are short gamma → they AMPLIFY moves
+// (sell as price falls, buy as price rises). Key SG walls (Put Wall, Call Wall, Key Gamma)
+// tend to BREAK rather than hold. This function detects when price is near a wall with
+// overwhelming flow confirmation of the break, and returns a breakout trade signal.
+//
+// Breakout SHORT: price near Put Wall from above + bearish flow → ruptura bajista
+// Breakout LONG:  price near Call Wall from below + bullish flow → ruptura alcista
+//
+
+interface BreakoutSignal {
+  direction: "LONG" | "SHORT";
+  wallName: string;
+  wallPrice: number;       // in analysis asset price space
+  wallCFDPrice: number;    // in CFD space
+  wallLevel: DecisionLevel | null;
+  flowScore: number;       // how many flow signals confirm (0-5)
+  reason: string;
+}
+
+// ============ BOUNCE DETECTION ============
+// Triggered when price is just above a key GEX support level after a bounce:
+//   • Positive gamma regime (mean reversion) → Vol Trigger / Zero Gamma / Max Gamma
+//   • Any regime: Gamma Flip crossed upward (structural bullish shift)
+//   • Any regime: Put Wall respected (price bounced off strongest put support)
+
+interface BounceSignal {
+  direction: "LONG" | "SHORT";  // LONG = rebote desde soporte | SHORT = rechazo desde resistencia
+  levelLabel: string;           // "Put Wall" | "Call Wall" | "Gamma Flip" | "Vol Trigger" | "Key Gamma" | "GEX $XXXX"
+  levelPrice: number;           // Analysis asset price
+  levelCFDPrice: number;        // CFD equivalent
+  distancePct: number;          // % de distancia al nivel (precio ya alejado del nivel)
+  regimeType: "positive" | "negative" | "very_negative" | "neutral";
+  reason: string;
+  // compat aliases
+  supportLevel: string;
+  supportPrice: number;
+  supportCFDPrice: number;
+}
+
+function detectBounce(
+  asset: AssetData,
+  sgLevels: OfficialSGLevels | null,
+  allLevels: DecisionLevel[],   // todos los niveles GEX individuales por strike
+  cfdTarget: string,
+  cfdPrice: number,
+  etfGex: Record<string, TradierGexData>,
+): BounceSignal[] {
+  if (!sgLevels || cfdPrice <= 0) return [];
+  const price = asset.currentPrice;
+  if (price <= 0) return [];
+
+  const toCFD = (lvl: number) => cfdPrice + (lvl - price) / price * cfdPrice;
+
+  // FIX 10: gammaFlipLevel for XAUUSD comes from GLD ETF scale (~$300).
+  // primaryAsset.currentPrice is also GLD (~$300). The toCFD() function
+  // converts correctly to CFD scale (~$3000+). This is by design.
+  const primarySym = cfdTarget === "XAUUSD" ? "GLD" : cfdTarget === "US30" ? "DIA" : null;
+  const etfData = primarySym ? etfGex?.[primarySym] : null;
+  const gammaFlip = (etfData?.gammaFlipLevel && etfData.gammaFlipLevel > 0)
+    ? etfData.gammaFlipLevel : (asset.gammaFlipLevel || 0);
+
+  const regime = sgLevels.gammaRegime;
+  const isPositive = regime === "positive";
+
+  // ─── CANDIDATOS: cada entrada tiene dir, nombre, nivel, prioridad, restricción de régimen ───
+  type Cand = { dir: "LONG" | "SHORT"; name: string; level: number; priority: number; anyRegime: boolean };
+  const candidates: Cand[] = [];
+
+  // ── LONG desde soporte (precio ya POR ENCIMA del nivel) ──────────────
+  const addLong = (name: string, level: number, priority: number, anyRegime: boolean) => {
+    if (level <= 0 || price <= level) return;
+    const d = (price - level) / price * 100;
+    if (d >= 0.05 && d <= 2.5) candidates.push({ dir: "LONG", name, level, priority, anyRegime });
+  };
+
+  addLong("Put Wall",    sgLevels.putWall,    5, true);   // soporte más fuerte — cualquier régimen
+  addLong("Gamma Flip",  gammaFlip,           4, true);   // cruce alcista del flip — cualquier régimen
+  addLong("Zero Gamma",  sgLevels.zeroGamma,  4, true);   // igual que Gamma Flip
+  addLong("Vol Trigger", sgLevels.volTrigger, 3, false);  // solo gamma positivo (mean-rev)
+  addLong("Key Gamma",   sgLevels.keyGamma,   3, true);
+  addLong("Max Gamma",   sgLevels.maxGamma,   2, false);  // solo gamma positivo
+
+  // Todos los niveles GEX individuales debajo del precio (soporte)
+  for (const lvl of allLevels) {
+    if (lvl.strike >= price) continue;
+    if (lvl.hierarchy === "minor") continue;          // solo dominant y reaction
+    if ((lvl.biasScore ?? 50) < 55) continue;         // sesgo comprador
+    const d = (price - lvl.strike) / price * 100;
+    if (d < 0.05 || d > 2.5) continue;
+    const prio = lvl.hierarchy === "dominant" ? 4 : 2;
+    candidates.push({ dir: "LONG", name: `GEX $${lvl.strike.toLocaleString()} (${lvl.hierarchy})`, level: lvl.strike, priority: prio, anyRegime: true });
+  }
+
+  // ── SHORT desde resistencia (precio ya POR DEBAJO del nivel) ─────────
+  const addShort = (name: string, level: number, priority: number, anyRegime: boolean) => {
+    if (level <= 0 || price >= level) return;
+    const d = (level - price) / price * 100;
+    if (d >= 0.05 && d <= 2.5) candidates.push({ dir: "SHORT", name, level, priority, anyRegime });
+  };
+
+  addShort("Call Wall",   sgLevels.callWall,   5, true);   // resistencia más fuerte
+  addShort("Gamma Flip",  gammaFlip,           4, true);   // cruce bajista del flip
+  addShort("Zero Gamma",  sgLevels.zeroGamma,  4, true);
+  addShort("Key Gamma",   sgLevels.keyGamma,   3, true);
+  addShort("Vol Trigger", sgLevels.volTrigger, 3, false);  // solo gamma positivo
+  addShort("Max Gamma",   sgLevels.maxGamma,   2, false);
+
+  // Todos los niveles GEX individuales por encima del precio (resistencia)
+  for (const lvl of allLevels) {
+    if (lvl.strike <= price) continue;
+    if (lvl.hierarchy === "minor") continue;
+    if ((lvl.biasScore ?? 50) > 45) continue;         // sesgo vendedor
+    const d = (lvl.strike - price) / price * 100;
+    if (d < 0.05 || d > 2.5) continue;
+    const prio = lvl.hierarchy === "dominant" ? 4 : 2;
+    candidates.push({ dir: "SHORT", name: `GEX $${lvl.strike.toLocaleString()} (${lvl.hierarchy})`, level: lvl.strike, priority: prio, anyRegime: true });
+  }
+
+  if (candidates.length === 0) return [];
+
+  // Filtrar por régimen y ordenar por prioridad
+  const valid = candidates.filter(c => c.anyRegime || isPositive);
+  if (valid.length === 0) return [];
+
+  valid.sort((a, b) => b.priority - a.priority);
+
+  return valid.slice(0, 4).map(best => {
+    const distPct = best.dir === "LONG"
+      ? (price - best.level) / price * 100
+      : (best.level - price) / price * 100;
+    const levelCFDPrice = toCFD(best.level);
+    const verb = best.dir === "LONG" ? "REBOTE" : "RECHAZO";
+    const prep = best.dir === "LONG" ? "sobre soporte" : "bajo resistencia";
+    const reason = `${verb} ${best.name} $${best.level.toLocaleString()} — precio ${distPct.toFixed(2)}% ${prep} | Regime: ${regime}`;
+    return {
+      direction:      best.dir,
+      levelLabel:     best.name,
+      levelPrice:     best.level,
+      levelCFDPrice,
+      distancePct:    distPct,
+      regimeType:     regime as BounceSignal["regimeType"],
+      reason,
+      // compat
+      supportLevel:    best.name,
+      supportPrice:    best.level,
+      supportCFDPrice: levelCFDPrice,
+    };
+  });
+}
+
+function detectBreakout(
+  primaryAsset: AssetData,
+  sgLevels: OfficialSGLevels | null,
+  cfdTarget: string,
+  cfdPrice: number,
+  levels: DecisionLevel[],
+  hiro: HiroData | null,
+  tape: TapeData | null,
+  vannaContext: VannaContext | null,
+  groupAssets: string[],
+  traceData: TraceData | null | undefined,
+  etfGex: Record<string, TradierGexData> | undefined,
+  vixLevel: number = 20,
+): BreakoutSignal | null {
+  // ── Gate 1: gamma regime MUST be negative or very_negative ────────────
+  if (!sgLevels) return null;
+  const regime = sgLevels.gammaRegime;
+  if (regime !== "negative" && regime !== "very_negative") return null;
+
+  const price = primaryAsset.currentPrice;
+  if (!price || price <= 0 || cfdPrice <= 0) return null;
+
+  // ── Gate 2: find levels within proximity ────────────────────────────────
+  // Includes BOTH official SG walls AND any reaction/dominant decision level.
+  // 0.8% for normal, 1.2% for very_negative (price accelerates → wider window)
+  const vixMultiplier = Math.min(2.5, Math.max(1.0, (vixLevel || 20) / 20));
+  const baseProximityPct = regime === "very_negative" ? 0.015 : 0.010;
+  const proximityPct = baseProximityPct * vixMultiplier;
+
+  interface WallCandidate {
+    name: string;
+    wallPrice: number;
+    breakDirection: "LONG" | "SHORT";
+    distPct: number;   // absolute distance as % of price
+    priority: number;  // lower = higher priority (SG walls > dominant > reaction)
+  }
+
+  const candidates: WallCandidate[] = [];
+  const addedStrikes = new Set<number>(); // avoid duplicates
+
+  // ── A) Official SG walls (highest priority) ─────────────────────────
+  // Put Wall: price above or at it → SHORT breakout (breaking support)
+  if (sgLevels.putWall > 0) {
+    const dist = (price - sgLevels.putWall) / price;
+    if (dist >= -0.003 && dist <= proximityPct) {
+      candidates.push({ name: "Put Wall", wallPrice: sgLevels.putWall, breakDirection: "SHORT", distPct: dist * 100, priority: 0 });
+      addedStrikes.add(sgLevels.putWall);
+    }
+  }
+
+  // Call Wall: price below or at it → LONG breakout (breaking resistance)
+  if (sgLevels.callWall > 0) {
+    const dist = (sgLevels.callWall - price) / price;
+    if (dist >= -0.003 && dist <= proximityPct) {
+      candidates.push({ name: "Call Wall", wallPrice: sgLevels.callWall, breakDirection: "LONG", distPct: dist * 100, priority: 0 });
+      addedStrikes.add(sgLevels.callWall);
+    }
+  }
+
+  // Key Gamma: pivot — direction depends on approach side
+  if (sgLevels.keyGamma > 0 && sgLevels.keyGamma !== sgLevels.putWall && sgLevels.keyGamma !== sgLevels.callWall) {
+    const dist = Math.abs(price - sgLevels.keyGamma) / price;
+    if (dist <= proximityPct) {
+      const breakDir: "LONG" | "SHORT" = price >= sgLevels.keyGamma ? "SHORT" : "LONG";
+      candidates.push({ name: "Key Gamma", wallPrice: sgLevels.keyGamma, breakDirection: breakDir, distPct: dist * 100, priority: 0 });
+      addedStrikes.add(sgLevels.keyGamma);
+    }
+  }
+
+  // Vol Trigger: important regime boundary
+  if (sgLevels.volTrigger > 0 && !addedStrikes.has(sgLevels.volTrigger)) {
+    const dist = Math.abs(price - sgLevels.volTrigger) / price;
+    if (dist <= proximityPct) {
+      const breakDir: "LONG" | "SHORT" = price >= sgLevels.volTrigger ? "SHORT" : "LONG";
+      candidates.push({ name: "Vol Trigger", wallPrice: sgLevels.volTrigger, breakDirection: breakDir, distPct: dist * 100, priority: 1 });
+      addedStrikes.add(sgLevels.volTrigger);
+    }
+  }
+
+  // Max Gamma
+  if (sgLevels.maxGamma > 0 && !addedStrikes.has(sgLevels.maxGamma)) {
+    const dist = Math.abs(price - sgLevels.maxGamma) / price;
+    if (dist <= proximityPct) {
+      const breakDir: "LONG" | "SHORT" = price >= sgLevels.maxGamma ? "SHORT" : "LONG";
+      candidates.push({ name: "Max Gamma", wallPrice: sgLevels.maxGamma, breakDirection: breakDir, distPct: dist * 100, priority: 1 });
+      addedStrikes.add(sgLevels.maxGamma);
+    }
+  }
+
+  // ── B) Decision levels: reaction and dominant strikes ──────────────
+  // These are the gamma strikes already classified by classifyDecisionLevels.
+  // In negative gamma, ANY significant level can break — not just SG walls.
+  for (const level of levels) {
+    if (level.hierarchy === "minor") continue; // only reaction/dominant
+    if (addedStrikes.has(level.strike)) continue; // avoid duplicates with SG walls
+    const dist = Math.abs(level.strike - price) / price;
+    if (dist > proximityPct) continue;
+
+    // Direction: if price is above the level → SHORT breakout through it
+    //            if price is below the level → LONG breakout through it
+    const breakDir: "LONG" | "SHORT" = price >= level.strike ? "SHORT" : "LONG";
+    const label = level.confluenceWithSG
+      ? `Gamma ${level.hierarchy} + ${level.sgLevelType}`
+      : `Gamma ${level.hierarchy} $${level.strike.toLocaleString()}`;
+    const priorityRank = level.hierarchy === "dominant" ? 2 : 3;
+
+    candidates.push({ name: label, wallPrice: level.strike, breakDirection: breakDir, distPct: dist * 100, priority: priorityRank });
+    addedStrikes.add(level.strike);
+  }
+
+  if (candidates.length === 0) return null;
+
+  // Sort: SG walls first (priority 0), then dominant (2), then reaction (3), then by proximity
+  candidates.sort((a, b) => a.priority - b.priority || a.distPct - b.distPct);
+
+  // ── Gate 3: check institutional flow alignment for each candidate ──────
+  for (const candidate of candidates) {
+    const dir = candidate.breakDirection;
+    let flowCount = 0;
+    const flowDetails: string[] = [];
+
+    // Flow 1: HIRO consensus across group assets
+    if (hiro) {
+      let hiroBull = 0, hiroBear = 0;
+      for (const sym of groupAssets) {
+        const t = hiro.perAsset?.[sym]?.hiroTrend;
+        if (t === "bullish") hiroBull++;
+        else if (t === "bearish") hiroBear++;
+      }
+      if (dir === "SHORT" && hiroBear > hiroBull) {
+        flowCount++;
+        flowDetails.push(`HIRO bajista (${hiroBear}/${groupAssets.length})`);
+      } else if (dir === "LONG" && hiroBull > hiroBear) {
+        flowCount++;
+        flowDetails.push(`HIRO alcista (${hiroBull}/${groupAssets.length})`);
+      }
+    }
+
+    // Flow 2: Tape (options flow sentiment)
+    if (tape?.perAsset) {
+      const assetFlow = tape.perAsset[primaryAsset.symbol];
+      if (assetFlow && assetFlow.totalTrades > 0) {
+        if (dir === "SHORT" && (assetFlow.sentiment === "bearish" || assetFlow.sentimentScore < 42)) {
+          flowCount++;
+          flowDetails.push(`Tape bajista (${assetFlow.sentimentScore})`);
+        } else if (dir === "LONG" && (assetFlow.sentiment === "bullish" || assetFlow.sentimentScore > 58)) {
+          flowCount++;
+          flowDetails.push(`Tape alcista (${assetFlow.sentimentScore})`);
+        }
+      }
+    }
+
+    // Flow 3: Vanna (VIX/IV mechanics)
+    if (vannaContext) {
+      if (cfdTarget === "NAS100" || cfdTarget === "US30") {
+        if (dir === "SHORT" && vannaContext.vixVannaSignal === "bearish") {
+          flowCount++;
+          flowDetails.push(`Vanna bajista (VIX +${Math.abs(vannaContext.vixChangePct).toFixed(1)}%)`);
+        } else if (dir === "LONG" && vannaContext.vixVannaSignal === "bullish") {
+          flowCount++;
+          flowDetails.push(`Vanna alcista (VIX ${vannaContext.vixChangePct.toFixed(1)}%)`);
+        }
+      } else if (cfdTarget === "XAUUSD") {
+        if (dir === "SHORT" && vannaContext.gldVannaSignal === "bearish") {
+          flowCount++;
+          flowDetails.push("Vanna GLD bajista");
+        } else if (dir === "LONG" && (vannaContext.gldVannaSignal === "bullish" || vannaContext.refugeFlowActive)) {
+          flowCount++;
+          flowDetails.push("Vanna GLD alcista");
+        }
+      }
+    }
+
+    // Flow 4: GEX bias (0DTE TRACE for NAS100, own GEX for US30/XAUUSD)
+    if (cfdTarget === "NAS100" && traceData && traceData.netGexBias) {
+      if (dir === "SHORT" && traceData.netGexBias === "bearish") {
+        flowCount++;
+        flowDetails.push(`0DTE GEX bajista (ratio ${traceData.gexRatio?.toFixed(2) || "N/A"})`);
+      } else if (dir === "LONG" && traceData.netGexBias === "bullish") {
+        flowCount++;
+        flowDetails.push(`0DTE GEX alcista (ratio ${traceData.gexRatio?.toFixed(2) || "N/A"})`);
+      }
+    } else if (cfdTarget === "US30" && etfGex?.["DIA"]) {
+      if (dir === "SHORT" && etfGex["DIA"].netBias === "bearish") {
+        flowCount++;
+        flowDetails.push("GEX DIA bajista");
+      } else if (dir === "LONG" && etfGex["DIA"].netBias === "bullish") {
+        flowCount++;
+        flowDetails.push("GEX DIA alcista");
+      }
+    } else if (cfdTarget === "XAUUSD" && etfGex?.["GLD"]) {
+      if (dir === "SHORT" && etfGex["GLD"].netBias === "bearish") {
+        flowCount++;
+        flowDetails.push("GEX GLD bajista");
+      } else if (dir === "LONG" && etfGex["GLD"].netBias === "bullish") {
+        flowCount++;
+        flowDetails.push("GEX GLD alcista");
+      }
+    }
+
+    // Flow 5: Options skew (put_skew → bearish pressure, call_skew → complacency)
+    const neSkew = sgLevels.neSkew || 0;
+    if (dir === "SHORT" && neSkew < -0.05) {
+      flowCount++;
+      flowDetails.push(`Put skew (${neSkew.toFixed(3)})`);
+    } else if (dir === "LONG" && neSkew > 0.05) {
+      flowCount++;
+      flowDetails.push(`Call skew (${neSkew.toFixed(3)})`);
+    }
+
+    // ── Minimum flow threshold ───────────────────────────────────────────
+    // very_negative regime: 2/5 signals (regime itself is very strong)
+    // negative regime: 3/5 signals (need more external confirmation)
+    const minFlow = regime === "very_negative" ? 2 : 3;
+    if (flowCount < minFlow) continue;
+
+    // ── Find DecisionLevel nearest to the wall ───────────────────────────
+    const wallLevel = levels
+      .filter(l => Math.abs(l.strike - candidate.wallPrice) / price < 0.005)
+      .sort((a, b) =>
+        Math.abs(a.strike - candidate.wallPrice) - Math.abs(b.strike - candidate.wallPrice),
+      )[0] || null;
+
+    // Convert wall to CFD price
+    const wallCFDPrice = cfdPrice + (candidate.wallPrice - price) / price * cfdPrice;
+
+    const emoji = dir === "SHORT" ? "🔻" : "🔺";
+    const reason =
+      `${emoji} RUPTURA ${candidate.name} $${candidate.wallPrice.toLocaleString()} (${candidate.distPct.toFixed(2)}%) | ` +
+      `Gamma ${regime === "very_negative" ? "MUY " : ""}NEGATIVO + ${flowCount}/5 flujos confirman: ${flowDetails.join(", ")}`;
+
+    return { direction: dir, wallName: candidate.name, wallPrice: candidate.wallPrice, wallCFDPrice, wallLevel, flowScore: flowCount, reason };
+  }
+
+  return null;
+}
+
+// ============ CFD PRICE CONVERSION ============
+
+function convertToCFDPrice(
+  analysisAsset: string,
+  analysisPrice: number,
+  cfdTarget: string,
+  cfdPrices: CFDPriceData | null,
+): number {
+  if (!cfdPrices) return 0;
+
+  if (cfdTarget === "NAS100") return cfdPrices.nas100.price;
+  if (cfdTarget === "US30") return cfdPrices.us30.price;
+  if (cfdTarget === "XAUUSD") return cfdPrices.xauusd.price;
+  return 0;
+}
+
+function convertPointsToCFD(
+  analysisAsset: string,
+  analysisPoints: number,
+  cfdTarget: string,
+  analysisPrice: number,
+  cfdPrice: number,
+): number {
+  if (analysisPrice === 0 || cfdPrice === 0) return 0;
+  // Convert using percentage: same % move in analysis = same % move in CFD
+  const pctMove = analysisPoints / analysisPrice;
+  return pctMove * cfdPrice;
+}
+
+// ============ SESSION FILTER & ENTRY QUALITY ============
+
+interface SessionContext {
+  session: "apertura" | "tendencia_am" | "almuerzo" | "retoma" | "power_hour" | "fuera";
+  sessionLabel: string;
+  isLunch: boolean;       // NY lunch = watch-only by default
+  scoreThreshold: number; // Minimum score for ENTRADA
+  watchThreshold: number; // Minimum score to show as VIGILANCIA
+}
+
+/** Detects current trading session in ET time, displays in Colombia time. */
+// getSessionContext() removed: sessionType is now a PPO feature, not a rule (Fase 3 PPO Puro)
+
+interface EntryQuality {
+  quality: "optimal" | "valid" | "caution" | "watch";
+  note: string;
+}
+
+/**
+ * Assesses entry quality based on:
+ * 1. Distance to nearest gamma level (tight = better)
+ * 2. Rejection confirmation: for SHORT at resistance price should be BELOW level,
+ *    for LONG at support price should be ABOVE level (proxy for candle rejection).
+ */
+function assessEntryQuality(
+  direction: "LONG" | "SHORT" | "NO_TRADE",
+  entryLevel: DecisionLevel | null,
+  currentPrice: number,
+  hiroConfirmed: boolean = false,
+  tapeConfirmed: boolean = false,
+  hiroAvailable: boolean = false,
+  tapeAvailable: boolean = false,
+): EntryQuality {
+  if (direction === "NO_TRADE" || !entryLevel) {
+    return { quality: "watch", note: "Sin nivel de entrada definido." };
+  }
+
+  const level = entryLevel.strike;
+  const distAbs = Math.abs(currentPrice - level); // absolute points
+  const distPct = distAbs / level * 100;
+
+  // ── Multi-factor rejection confirmation ────────────────────────────────
+  // Factor 1 (required): price is on the correct side of the level
+  //   SHORT at resistance → price already below level (started rejecting)
+  //   LONG  at support    → price already above level (started bouncing)
+  const priceAtCorrectSide =
+    (direction === "SHORT" && currentPrice < level) ||
+    (direction === "LONG"  && currentPrice > level);
+
+  // Factor 2 (flow): HIRO trend or tape flow agrees with direction.
+  // HIRO is the primary flow signal (intraday options momentum).
+  // Tape is secondary (actual premium flow).
+  // If neither data source is available → fall back to price-position only.
+  const hasFlowData   = hiroAvailable || tapeAvailable;
+  const flowConfirms  = hiroConfirmed || tapeConfirmed;
+
+  // Rejection requires price on correct side.
+  // When flow data exists, it must also agree (prevents false rejections where
+  // price dipped below resistance but HIRO is still bullish → no real rejection).
+  const showingRejection = priceAtCorrectSide && (!hasFlowData || flowConfirms);
+
+  // Build a label for the confirmation detail
+  const rejectionDetail = showingRejection
+    ? (() => {
+        if (!hasFlowData) return "rechazo precio-proxy";
+        const parts: string[] = [];
+        if (hiroConfirmed)  parts.push("HIRO ✓");
+        if (tapeConfirmed)  parts.push("Tape ✓");
+        return parts.length ? parts.join(" + ") : "rechazo confirmado";
+      })()
+    : (() => {
+        if (!priceAtCorrectSide) return "precio no ha tocado nivel";
+        // price ok but flow disagrees
+        const against: string[] = [];
+        if (hiroAvailable && !hiroConfirmed) against.push("HIRO en contra");
+        if (tapeAvailable && !tapeConfirmed) against.push("Tape en contra");
+        return against.length ? against.join(", ") : "sin confirmación de flujo";
+      })();
+
+  // Asset-specific distance thresholds (all in %):
+  //   SPX-scale (price > 1000):   optimal < 0.05% (~3 pts) | valid < 0.10% (~7 pts) | watch < 0.22% (~15 pts)
+  //   ETF-scale (GLD/DIA ≤ 1000): optimal < 0.15% (~$0.64) | valid < 0.30% (~$1.28) | watch < 0.60% (~$2.56)
+  //   GLD/DIA need wider % bands — strikes every $1, less granular gamma levels
+  let zoneOptimal: boolean, zoneValid: boolean, zoneWatch: boolean;
+  let distDisplay: string;
+
+  if (currentPrice > 1000) {
+    // SPX / index scale — very tight, every point matters
+    zoneOptimal = distPct <= 0.05;
+    zoneValid   = distPct <= 0.10;
+    zoneWatch   = distPct <= 0.22;
+    distDisplay = `${distAbs.toFixed(0)}pts (${distPct.toFixed(2)}%)`;
+  } else {
+    // ETF scale: GLD (~$426), DIA (~$463) — wider % because strikes at $1 intervals
+    zoneOptimal = distPct <= 0.15;
+    zoneValid   = distPct <= 0.30;
+    zoneWatch   = distPct <= 0.60;
+    distDisplay = `$${distAbs.toFixed(2)} (${distPct.toFixed(2)}%)`;
+  }
+
+  if (zoneOptimal && showingRejection)
+    return { quality: "optimal", note: `$${level.toLocaleString()} (${distDisplay}) — ${rejectionDetail} — entrada óptima.` };
+
+  if (zoneOptimal && !showingRejection)
+    return { quality: "caution", note: `Precio en zona $${level.toLocaleString()} (${distDisplay}) pero ${rejectionDetail} — esperar confirmación.` };
+
+  if (zoneValid && showingRejection)
+    return { quality: "valid", note: `$${level.toLocaleString()} (${distDisplay}) — ${rejectionDetail} — entrada válida.` };
+
+  if (zoneValid && !showingRejection)
+    return { quality: "caution", note: `Acercándose a $${level.toLocaleString()} (${distDisplay}) — ${rejectionDetail} — sin confirmación aún.` };
+
+  if (zoneWatch)
+    return { quality: "watch", note: `$${level.toLocaleString()} lejos (${distDisplay}) — vigilar acercamiento.` };
+
+  return { quality: "watch", note: `$${level.toLocaleString()} muy lejos (${distDisplay}) — no operar.` };
+}
+
+// ============ DYNAMIC SL/TP IN CFD PRICES ============
+
+/**
+ * Returns volatility-adaptive SL parameters based on VIX level and asset IV Rank.
+ * VIX is the primary driver; IV Rank of the specific asset is secondary.
+ *
+ * VIX regimes:
+ *   < 15  → calm     → tighter SL allowed
+ *   15-20 → normal   → base SL
+ *   20-25 → elevated → 1.4× wider SL, more risk budget
+ *   25-30 → high     → 1.8× wider SL, more risk budget
+ *   > 30  → extreme  → 2.5× wider SL, max risk budget
+ *
+ * IV Rank adds up to +35% on top.
+ */
+function getVolatilityAdjustedSLParams(
+  vixPrice: number,
+  ivRank: number,
+  cfdTarget: string,
+): { mult: number; dynamicMinSL: number; dynamicMaxRisk: number; volDesc: string } {
+  // VIX-based base multiplier
+  let vixMult: number;
+  let regime: "calm" | "normal" | "elevated" | "high" | "extreme";
+  if (vixPrice < 15)      { vixMult = 0.85; regime = "calm"; }
+  else if (vixPrice < 20) { vixMult = 1.00; regime = "normal"; }
+  else if (vixPrice < 25) { vixMult = 1.40; regime = "elevated"; }
+  else if (vixPrice < 30) { vixMult = 1.80; regime = "high"; }
+  else                    { vixMult = 2.50; regime = "extreme"; }
+
+  // IV Rank secondary multiplier (asset-specific volatility)
+  let ivMult = 1.0;
+  if (ivRank > 70)      ivMult = 1.35;
+  else if (ivRank > 50) ivMult = 1.20;
+  else if (ivRank > 30) ivMult = 1.10;
+
+  const mult = Math.min(vixMult * ivMult, 3.0); // cap at 3×
+
+  // Dynamic minimum SL (pts) per asset per VIX regime
+  // These are chosen so stops survive intraday noise at each vol level
+  const MIN_SL_TABLE: Record<string, Record<string, number>> = {
+    NAS100: { calm: 35,  normal: 55,  elevated: 90,  high: 130, extreme: 200 },
+    US30:   { calm: 25,  normal: 40,  elevated: 60,  high: 80,  extreme: 100 }, // 0.1 lot → $0.10/pt
+    XAUUSD: { calm: 10,  normal: 18,  elevated: 28,  high: 38,  extreme: 50  },
+  };
+
+  // Dynamic max risk ($) per asset per VIX regime
+  // Higher vol → allow a bigger stop in $ to avoid getting chopped out
+  const MAX_RISK_TABLE: Record<string, Record<string, number>> = {
+    NAS100: { calm: 8,  normal: 10, elevated: 14, high: 18, extreme: 25 },
+    US30:   { calm: 4,  normal: 6,  elevated: 8,  high: 10, extreme: 12 }, // $0.10/pt: 40pts=$4, 100pts=$10
+    XAUUSD: { calm: 10, normal: 18, elevated: 25, high: 32, extreme: 45 }, // cap extremo en $45
+  };
+
+  const dynamicMinSL    = MIN_SL_TABLE[cfdTarget]?.[regime]    ?? CFD_SPECS[cfdTarget]?.minSLPoints ?? 10;
+  const dynamicMaxRisk  = MAX_RISK_TABLE[cfdTarget]?.[regime]  ?? CFD_SPECS[cfdTarget]?.maxRiskUSD  ?? 10;
+
+  const volDesc = `VIX ${vixPrice.toFixed(0)} (${regime}) ivRk ${ivRank}%`;
+  return { mult, dynamicMinSL, dynamicMaxRisk, volDesc };
+}
+
+/**
+ * Factor 2: GEX Regime multiplier.
+ * In negative gamma, dealers amplify moves → wider SL needed.
+ * In positive gamma, mean-reversion is likely → tighter SL is safer.
+ */
+function getGEXRegimeSLMult(gammaRegime: string): { mult: number; desc: string } {
+  switch (gammaRegime) {
+    case "very_negative": return { mult: 1.40, desc: "GEX muy neg" };
+    case "negative":      return { mult: 1.20, desc: "GEX neg" };
+    case "neutral":       return { mult: 1.00, desc: "GEX neutral" };
+    case "positive":      return { mult: 0.88, desc: "GEX pos (mean-rev)" };
+    case "very_positive": return { mult: 0.80, desc: "GEX muy pos" };
+    default:              return { mult: 1.00, desc: "" };
+  }
+}
+
+/**
+ * Factor 3: Time-of-day multiplier, using ET (Eastern Time) sessions.
+ * Colombia (UTC-5) during EDT season: CO = ET - 1hr (market opens 8:30 CO).
+ * During EST season: CO = ET (market opens 9:30 CO).
+ * Volatility pattern: wild at open, quiet at lunch, elevated at close.
+ */
+function getTimeOfDaySLMult(et?: ETTimeInfo): { mult: number; session: string } {
+  const t = et || getETTime();
+  const etMins = t.etMins;
+
+  // Colombia display offset (CO = ET - 1 during EDT, CO = ET during EST)
+  const coDiff = t.isEDT ? -1 : 0;
+  const coOpen = `${9 + coDiff}:30-${10 + coDiff}:00`;
+
+  // Market open = 9:30 ET, close = 16:00 ET
+  if (etMins < 570 || etMins >= 960)   return { mult: 1.00, session: "pre/post mercado" };
+  if (etMins < 600)                     return { mult: 1.35, session: `apertura ${coOpen} CO` };
+  if (etMins < 690)                     return { mult: 1.00, session: "tendencia AM" };
+  if (etMins < 870)                     return { mult: 0.80, session: "almuerzo NY (bajo vol)" };
+  if (etMins < 900)                     return { mult: 1.10, session: "retoma tarde" };
+  return                                       { mult: 1.30, session: "power hour" };
+}
+
+/**
+ * Factor 4: Day-type multiplier.
+ * OpEx days and Mondays have structurally higher volatility.
+ */
+function getDayTypeSLMult(sessionDate: string): { mult: number; desc: string } {
+  const [y, mo, d] = sessionDate.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  const dow = dt.getUTCDay(); // 0=Sun, 5=Fri, 1=Mon
+
+  if (dow === 5) {
+    // Find 3rd Friday of the month
+    let friCount = 0, thirdFri = 0;
+    for (let i = 1; i <= 31; i++) {
+      const test = new Date(Date.UTC(y, mo - 1, i));
+      if (test.getUTCMonth() !== mo - 1) break;
+      if (test.getUTCDay() === 5 && ++friCount === 3) { thirdFri = i; break; }
+    }
+    if (d === thirdFri) return { mult: 1.60, desc: "OpEx mensual (3er viernes)" };
+    return { mult: 1.25, desc: "viernes (OpEx semanal)" };
+  }
+  if (dow === 1) return { mult: 1.10, desc: "lunes" };
+  return { mult: 1.00, desc: "día normal" };
+}
+
+function calculateCFDStopLoss(
+  direction: "LONG" | "SHORT",
+  cfdPrice: number,
+  cfdTarget: string,
+  levels: DecisionLevel[],
+  analysisPrice: number,
+  sgLevels: OfficialSGLevels | null,
+  vannaContext: VannaContext | null,
+  assetIvRank: number = 30,
+  gammaRegime: string = "neutral",
+  sessionDate: string = "",
+  newsMult: number = 1.0,       // Factor 5: macro-event volatility (default = no adjustment)
+): { sl: number; slPoints: number; slRiskUSD: number; reason: string } {
+  const spec = CFD_SPECS[cfdTarget];
+  if (!spec) return { sl: 0, slPoints: 0, slRiskUSD: 0, reason: "Sin spec CFD" };
+
+  // Strategy: Find the nearest gamma level that would invalidate the trade
+  // Then convert to CFD price and check if it's within risk tolerance
+
+  let slPoints = 0;
+  let reason = "";
+
+  if (direction === "LONG") {
+    // SL below nearest support level
+    const levelsBelow = levels
+      .filter(l => l.strike < analysisPrice)
+      .sort((a, b) => b.strike - a.strike);
+
+    if (levelsBelow.length > 0) {
+      const nearest = levelsBelow[0];
+      const analysisSLDistance = analysisPrice - nearest.strike;
+      const pctDistance = analysisSLDistance / analysisPrice;
+      slPoints = pctDistance * cfdPrice;
+
+      // If confluent with SG level, put SL just below it (tighter)
+      if (nearest.confluenceWithSG) {
+        slPoints = slPoints * 0.7; // Tighter SL at SG levels (they hold better)
+        reason = `Bajo ${nearest.sgLevelType} $${nearest.strike} (confluencia SG)`;
+      } else {
+        reason = `Bajo nivel gamma $${nearest.strike} (${nearest.hierarchy})`;
+      }
+    } else if (sgLevels && sgLevels.putWall > 0 && sgLevels.putWall < analysisPrice) {
+      const pctDistance = (analysisPrice - sgLevels.putWall) / analysisPrice;
+      slPoints = pctDistance * cfdPrice;
+      reason = `Bajo Put Wall oficial $${sgLevels.putWall}`;
+    } else {
+      // Default: use implied move as reference
+      const imPct = sgLevels ? sgLevels.impliedMovePct / 100 : 0.005;
+      slPoints = imPct * 0.3 * cfdPrice; // 30% of implied move
+      reason = "Default: 30% del Implied Move";
+    }
+  } else {
+    // SHORT: SL above nearest resistance
+    const levelsAbove = levels
+      .filter(l => l.strike > analysisPrice)
+      .sort((a, b) => a.strike - b.strike);
+
+    if (levelsAbove.length > 0) {
+      const nearest = levelsAbove[0];
+      const analysisSLDistance = nearest.strike - analysisPrice;
+      const pctDistance = analysisSLDistance / analysisPrice;
+      slPoints = pctDistance * cfdPrice;
+
+      if (nearest.confluenceWithSG) {
+        slPoints = slPoints * 0.7;
+        reason = `Sobre ${nearest.sgLevelType} $${nearest.strike} (confluencia SG)`;
+      } else {
+        reason = `Sobre nivel gamma $${nearest.strike} (${nearest.hierarchy})`;
+      }
+    } else if (sgLevels && sgLevels.callWall > 0 && sgLevels.callWall > analysisPrice) {
+      const pctDistance = (sgLevels.callWall - analysisPrice) / analysisPrice;
+      slPoints = pctDistance * cfdPrice;
+      reason = `Sobre Call Wall oficial $${sgLevels.callWall}`;
+    } else {
+      const imPct = sgLevels ? sgLevels.impliedMovePct / 100 : 0.005;
+      slPoints = imPct * 0.3 * cfdPrice;
+      reason = "Default: 30% del Implied Move";
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // DYNAMIC SL ADJUSTMENT — 4 factors applied in sequence
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // Factor 1 — VIX + IV Rank (primary sizing driver)
+  const vixPrice = vannaContext?.vixPrice ?? 18;
+  const { mult: volMult, dynamicMinSL, dynamicMaxRisk, volDesc } =
+    getVolatilityAdjustedSLParams(vixPrice, assetIvRank, cfdTarget);
+  slPoints *= volMult;
+
+  // Factor 2 — GEX Regime (negative gamma = dealers amplify = wider SL)
+  const { mult: gexMult, desc: gexDesc } = getGEXRegimeSLMult(gammaRegime);
+
+  // Factor 3 — Time of day (apertura/almuerzo/power hour)
+  const { mult: timeMult, session: timeSession } = getTimeOfDaySLMult();
+
+  // Factor 4 — Day type (OpEx, lunes, normal)
+  const dateStr = sessionDate || new Date().toISOString().slice(0, 10);
+  const { mult: dayMult, desc: dayDesc } = getDayTypeSLMult(dateStr);
+
+  // Combine factors 2-4 with a cap so they don't explode (±50% max swing)
+  const secondaryMult = Math.min(Math.max(gexMult * timeMult * dayMult, 0.65), 1.65);
+  slPoints *= secondaryMult;
+
+  // Factor 5 — Macro event (FOMC / CPI / NFP)
+  // Wider SL to survive the initial spike/whipsaw around the release.
+  // Applied AFTER the other factors so it stacks on top of the context-aware base.
+  if (newsMult > 1.0) {
+    slPoints *= newsMult;
+    reason += ` [Noticia×${newsMult.toFixed(2)}]`;
+  }
+
+  // VRP fine-tune (tertiary, small adjustment)
+  let vrpNote = "";
+  if (sgLevels) {
+    const vrp = sgLevels.vrp;
+    if (vrp > 0.1)       { slPoints *= 0.93; vrpNote = " VRP↑"; }
+    else if (vrp < -0.02) { slPoints *= 1.08; vrpNote = " VRP↓"; }
+  }
+
+  // Build reason string
+  reason += ` [×${volMult.toFixed(2)} ${volDesc}]`;
+  reason += ` [GEX×${gexMult.toFixed(2)} ${gexDesc}]`;
+  reason += ` [${timeSession}×${timeMult.toFixed(2)}]`;
+  reason += ` [${dayDesc}×${dayMult.toFixed(2)}${vrpNote}]`;
+
+  // ── Implied Move sanity bounds ─────────────────────────────────────────
+  // SL should live between 20% and 65% of the expected daily range.
+  // Prevents stops in pure noise (too tight) or stops with bad R:R (too wide).
+  if (sgLevels && sgLevels.impliedMovePct > 0 && spec.betaVsSPX > 0) {
+    const imPoints = (sgLevels.impliedMovePct / 100) * spec.betaVsSPX * cfdPrice;
+    const imFloor  = imPoints * 0.20;
+    const imCap    = imPoints * 0.65;
+    if (slPoints < imFloor) {
+      slPoints = imFloor;
+      reason += ` [IM floor ${imFloor.toFixed(0)}pts]`;
+    } else if (slPoints > imCap) {
+      slPoints = imCap;
+      reason += ` [IM cap ${imCap.toFixed(0)}pts]`;
+    }
+  }
+
+  // ── Enforce dynamic risk limits (VIX-scaled min/max) ─────────────────────
+  const riskUSD = slPoints * spec.valuePerPoint;
+  if (riskUSD > dynamicMaxRisk) {
+    slPoints = dynamicMaxRisk / spec.valuePerPoint;
+    reason += ` [Max $${dynamicMaxRisk.toFixed(0)}]`;
+  }
+  if (slPoints < dynamicMinSL) {
+    slPoints = dynamicMinSL;
+    reason += ` [Min ${dynamicMinSL}pts]`;
+  }
+
+  slPoints = Math.round(slPoints * 100) / 100;
+  const sl = direction === "LONG" ? cfdPrice - slPoints : cfdPrice + slPoints;
+  const slRiskUSD = Math.round(slPoints * spec.valuePerPoint * 100) / 100;
+
+  return { sl, slPoints, slRiskUSD, reason };
+}
+
+function calculateCFDTakeProfits(
+  direction: "LONG" | "SHORT",
+  cfdPrice: number,
+  slPoints: number,
+  cfdTarget: string,
+  levels: DecisionLevel[],
+  analysisPrice: number,
+  sgLevels: OfficialSGLevels | null,
+): { tp1: number; tp1Pts: number; tp2: number; tp2Pts: number; tp3: number; tp3Pts: number; reason: string; rr: number } {
+  const spec = CFD_SPECS[cfdTarget];
+  if (!spec || slPoints === 0) return { tp1: 0, tp1Pts: 0, tp2: 0, tp2Pts: 0, tp3: 0, tp3Pts: 0, reason: "", rr: 0 };
+
+  // Minimum R:R thresholds
+  const minTP1Pts = slPoints * 1.2;
+  const minTP2Pts = slPoints * 2.0;
+  const minTP3Pts = slPoints * 3.5;
+
+  // Maximum TP caps — prevents unrealistic targets from far SG levels (e.g. GLD callWall at $475 ETF)
+  // Based on max realistic intraday moves: NAS100 ~3%, US30 ~2.5%, XAUUSD ~4%
+  const maxDailyPct: Record<string, number> = { NAS100: 0.04, US30: 0.035, XAUUSD: 0.055 };
+  const maxPct = maxDailyPct[cfdTarget] ?? 0.04;
+  const MAX_TP1_PTS = Math.max(cfdPrice * maxPct * 0.45, minTP1Pts * 2);
+  const MAX_TP2_PTS = Math.max(cfdPrice * maxPct * 0.75, minTP2Pts * 2);
+  const MAX_TP3_PTS = Math.max(cfdPrice * maxPct, minTP3Pts * 2);
+
+  // Convert analysis price level → CFD points distance from current price
+  const analysisToCfdPts = (level: number) =>
+    Math.abs(level - analysisPrice) / analysisPrice * cfdPrice;
+
+  // ─── Build cascade of gamma wall targets ───
+  const tpWalls: { pts: number; label: string }[] = [];
+
+  if (direction === "LONG") {
+    // Gamma levels above price (reaction/dominant only)
+    levels
+      .filter(l => l.strike > analysisPrice && (l.hierarchy === "reaction" || l.hierarchy === "dominant"))
+      .sort((a, b) => a.strike - b.strike)
+      .forEach(l => tpWalls.push({ pts: analysisToCfdPts(l.strike), label: `Gamma $${l.strike.toLocaleString()} (${l.hierarchy})` }));
+    // Official SG walls
+    if (sgLevels?.keyGamma > analysisPrice)
+      tpWalls.push({ pts: analysisToCfdPts(sgLevels.keyGamma), label: `Key Gamma $${sgLevels.keyGamma.toLocaleString()}` });
+    if (sgLevels?.callWall > analysisPrice)
+      tpWalls.push({ pts: analysisToCfdPts(sgLevels.callWall), label: `Call Wall $${sgLevels.callWall.toLocaleString()}` });
+    if (sgLevels?.maxGamma > analysisPrice)
+      tpWalls.push({ pts: analysisToCfdPts(sgLevels.maxGamma), label: `Max Gamma $${sgLevels.maxGamma.toLocaleString()}` });
+  } else {
+    // SHORT: levels below price
+    levels
+      .filter(l => l.strike < analysisPrice && (l.hierarchy === "reaction" || l.hierarchy === "dominant"))
+      .sort((a, b) => b.strike - a.strike)
+      .forEach(l => tpWalls.push({ pts: analysisToCfdPts(l.strike), label: `Gamma $${l.strike.toLocaleString()} (${l.hierarchy})` }));
+    if (sgLevels?.keyGamma > 0 && sgLevels.keyGamma < analysisPrice)
+      tpWalls.push({ pts: analysisToCfdPts(sgLevels.keyGamma), label: `Key Gamma $${sgLevels.keyGamma.toLocaleString()}` });
+    if (sgLevels?.putWall > 0 && sgLevels.putWall < analysisPrice)
+      tpWalls.push({ pts: analysisToCfdPts(sgLevels.putWall), label: `Put Wall $${sgLevels.putWall.toLocaleString()}` });
+    if (sgLevels?.maxGamma > 0 && sgLevels.maxGamma < analysisPrice)
+      tpWalls.push({ pts: analysisToCfdPts(sgLevels.maxGamma), label: `Max Gamma $${sgLevels.maxGamma.toLocaleString()}` });
+  }
+
+  // Implied move as fallback baseline
+  let imPts = 0;
+  if (sgLevels && sgLevels.impliedMove > 0) {
+    const imPctCapped = Math.min(sgLevels.impliedMovePct, 5);
+    imPts = (imPctCapped / 100) * cfdPrice;
+  }
+
+  // Filter out walls too close to SL, sort ascending by distance
+  const validWalls = tpWalls
+    .filter(w => w.pts >= minTP1Pts)
+    .sort((a, b) => a.pts - b.pts);
+
+  const usedLabels: string[] = [];
+
+  // TP1: nearest valid gamma wall, or 40% of implied move
+  let tp1Pts = minTP1Pts;
+  if (validWalls[0]) {
+    tp1Pts = validWalls[0].pts;
+    usedLabels.push(`TP1 → ${validWalls[0].label}`);
+  } else if (imPts > 0) {
+    tp1Pts = Math.max(imPts * 0.4, minTP1Pts);
+    usedLabels.push(`TP1 40% IM (${sgLevels?.impliedMove.toFixed(1)}pts)`);
+  }
+
+  // TP2: next wall at least 10% beyond TP1, or 70% of implied move
+  let tp2Pts = minTP2Pts;
+  const tp2Wall = validWalls.find(w => w.pts > tp1Pts * 1.10);
+  if (tp2Wall) {
+    tp2Pts = Math.max(tp2Wall.pts, minTP2Pts);
+    usedLabels.push(`TP2 → ${tp2Wall.label}`);
+  } else if (imPts > 0) {
+    tp2Pts = Math.max(imPts * 0.7, tp1Pts * 1.3, minTP2Pts);
+    usedLabels.push(`TP2 70% IM`);
+  } else {
+    tp2Pts = Math.max(tp1Pts * 1.5, minTP2Pts);
+  }
+
+  // TP3: furthest wall beyond TP2, or 100% of implied move (runner)
+  let tp3Pts = minTP3Pts;
+  const tp3Walls = validWalls.filter(w => w.pts > tp2Pts * 1.10);
+  const tp3Wall = tp3Walls[tp3Walls.length - 1]; // Furthest available
+  if (tp3Wall) {
+    tp3Pts = Math.max(tp3Wall.pts, minTP3Pts);
+    usedLabels.push(`TP3 → ${tp3Wall.label}`);
+  } else if (imPts > 0) {
+    tp3Pts = Math.max(imPts, tp2Pts * 1.4, minTP3Pts);
+    usedLabels.push(`TP3 100% IM`);
+  } else {
+    tp3Pts = Math.max(tp2Pts * 1.6, minTP3Pts);
+  }
+
+  // VRP adjustment (IV vs RV spread)
+  if (sgLevels && sgLevels.vrp !== 0) {
+    const vrp = sgLevels.vrp;
+    if (vrp > 0.05) {
+      tp1Pts *= 0.85; tp2Pts *= 0.85; tp3Pts *= 0.85;
+      usedLabels.push(`VRP +${(vrp * 100).toFixed(1)}% → TPs -15%`);
+    } else if (vrp < -0.02) {
+      tp1Pts *= 1.15; tp2Pts *= 1.15; tp3Pts *= 1.15;
+      usedLabels.push(`VRP ${(vrp * 100).toFixed(1)}% → TPs +15%`);
+    }
+  }
+
+  // Apply max caps (prevents GLD callWall 15% away from corrupting targets)
+  tp1Pts = Math.min(tp1Pts, MAX_TP1_PTS);
+  tp2Pts = Math.min(tp2Pts, MAX_TP2_PTS);
+  tp3Pts = Math.min(tp3Pts, MAX_TP3_PTS);
+
+  tp1Pts = Math.round(tp1Pts * 100) / 100;
+  tp2Pts = Math.round(tp2Pts * 100) / 100;
+  tp3Pts = Math.round(tp3Pts * 100) / 100;
+
+  const tp1 = direction === "LONG" ? cfdPrice + tp1Pts : cfdPrice - tp1Pts;
+  const tp2 = direction === "LONG" ? cfdPrice + tp2Pts : cfdPrice - tp2Pts;
+  const tp3 = direction === "LONG" ? cfdPrice + tp3Pts : cfdPrice - tp3Pts;
+  const rr = slPoints > 0 ? Math.round((tp2Pts / slPoints) * 10) / 10 : 0;
+
+  return { tp1, tp1Pts, tp2, tp2Pts, tp3, tp3Pts, reason: usedLabels.join(" | "), rr };
+}
+
+// ============ TRADE SCORING (6 confirmations) ============
+
+function calculateTradeScore(setup: {
+  gexConfirmed: boolean;
+  hiroConfirmed: boolean;
+  hiroContradicts: boolean;  // HIRO disponible pero en dirección opuesta al setup
+  tapeConfirmed: boolean;
+  levelConfirmed: boolean;
+  vannaConfirmed: boolean;
+  regimeConfirmed: boolean;
+  levelHierarchy: LevelHierarchy;
+  confluenceWithSG: boolean;
+  isTopStrike: boolean;
+  topStrikeRank?: number;
+  riskReward: number;
+  crossAssetStrength: string;
+  gexStrengthPct: number;
+}): number {
+  let score = 0;
+
+  // 6 confirmaciones principales
+  if (setup.gexConfirmed) {
+    const gexPts = setup.gexStrengthPct >= 75 ? 16 : setup.gexStrengthPct >= 50 ? 13 : setup.gexStrengthPct >= 25 ? 10 : 8;
+    score += gexPts;
+  }
+  if (setup.hiroConfirmed) score += 16;
+  // Penalización: HIRO claramente en contra → resta 10 puntos
+  // (distinto de HIRO neutro/mixto que simplemente no suma)
+  if (setup.hiroContradicts) score -= 10;
+  if (setup.tapeConfirmed) score += 16;
+  if (setup.levelConfirmed) score += 16;
+  if (setup.vannaConfirmed) score += 16;
+  if (setup.regimeConfirmed) score += 16;
+
+  // Bonus
+  if (setup.confluenceWithSG) score += 5;
+  if (setup.isTopStrike) score += setup.topStrikeRank === 1 ? 4 : 2;
+  if (setup.levelHierarchy === "dominant") score += 3;
+  if (setup.riskReward >= 2.5) score += 3;
+  if (setup.crossAssetStrength === "strong") score += 5;
+  else if (setup.crossAssetStrength === "moderate") score += 3;
+
+  return Math.min(100, Math.max(0, score));
+}
+
+// ============ OPEX CONTEXT (Mejora C) ============
+
+interface OPEXContext {
+  isWeeklyOPEX: boolean;
+  isMonthlyOPEX: boolean;
+  is0DTEOPEX: boolean;
+  opexType: string;
+  thresholdBoost: number;
+}
+
+/**
+ * Returns OPEX context for today.
+ * - OPEX semanal: viernes
+ * - OPEX SPX 0DTE: lunes, miércoles, viernes
+ * - OPEX mensual: tercer viernes del mes
+ */
+function getOPEXContext(date?: Date): OPEXContext {
+  const now = date || new Date();
+  const y = now.getUTCFullYear();
+  const mo = now.getUTCMonth() + 1; // 1-indexed
+  const d = now.getUTCDate();
+  const dow = now.getUTCDay(); // 0=Sun, 1=Mon, ..., 5=Fri, 6=Sat
+
+  // SPX 0DTE: lunes (1), miércoles (3), viernes (5)
+  const is0DTEOPEX = dow === 1 || dow === 3 || dow === 5;
+
+  // OPEX semanal: viernes
+  const isWeeklyOPEX = dow === 5;
+
+  // OPEX mensual: tercer viernes del mes
+  let isMonthlyOPEX = false;
+  let thirdFriday = 0;
+  if (isWeeklyOPEX) {
+    let friCount = 0;
+    for (let i = 1; i <= 31; i++) {
+      const dt = new Date(Date.UTC(y, mo - 1, i));
+      if (dt.getUTCMonth() !== mo - 1) break;
+      if (dt.getUTCDay() === 5 && ++friCount === 3) { thirdFriday = i; break; }
+    }
+    isMonthlyOPEX = d === thirdFriday;
+  }
+
+  let opexType = "normal";
+  let thresholdBoost = 0;
+
+  if (isMonthlyOPEX) {
+    opexType = "OPEX mensual (3er viernes)";
+    thresholdBoost = 8;
+  } else if (isWeeklyOPEX) {
+    opexType = "OPEX semanal (viernes)";
+    thresholdBoost = 3;
+  } else if (is0DTEOPEX) {
+    opexType = "SPX 0DTE (L/X/V)";
+    thresholdBoost = 5;
+  }
+
+  return { isWeeklyOPEX, isMonthlyOPEX, is0DTEOPEX, opexType, thresholdBoost };
+}
+
+// ============ NEW SETUP DETECTORS ============
+
+// ── Setup 1: Implied Move Exhaustion ─────────────────────────────────────────
+
+interface IMExhaustionSignal {
+  direction: "LONG" | "SHORT";
+  levelLabel: string;
+  levelPrice: number;
+  levelCFDPrice: number;
+  distancePct: number;
+  consumed: number;
+}
+
+/**
+ * detectIMExhaustion: cuando el precio consumió >75% del implied move del día
+ * y llega a un nivel GEX → reversión de alta probabilidad.
+ * Dirección CONTRARIA al movimiento del día.
+ */
+function detectIMExhaustion(
+  asset: AssetData,
+  sgLevels: OfficialSGLevels | null,
+  levels: DecisionLevel[],
+  cfdTarget: string,
+  cfdPrice: number,
+  imStatus: { consumed: number; impliedMovePct: number; isOverExtended: boolean; isExhausted: boolean },
+): IMExhaustionSignal | null {
+  if (!sgLevels || cfdPrice <= 0) return null;
+  if (imStatus.consumed < 0.75) return null;
+
+  const price = asset.currentPrice;
+  if (price <= 0) return null;
+
+  // Dirección contraria al movimiento del día
+  const dailyChangePct = asset.dailyChangePct || 0;
+  if (Math.abs(dailyChangePct) < 0.3) return null; // sin movimiento claro
+
+  const direction: "LONG" | "SHORT" = dailyChangePct > 0 ? "SHORT" : "LONG";
+
+  // Buscar nivel GEX cercano (dominant o reaction dentro de 0.3%)
+  const toCFD = (lvl: number) => cfdPrice + (lvl - price) / price * cfdPrice;
+  const threshold = 0.008; // 0.8% — cuando IM está agotado, precio suele estar lejos de niveles
+
+  // Buscar en niveles GEX clasificados
+  const nearLevel = levels.find(l =>
+    (l.hierarchy === "dominant" || l.hierarchy === "reaction") &&
+    l.distancePct < threshold * 100,
+  );
+
+  // También verificar niveles oficiales SG
+  const sgCandidates: { label: string; price: number }[] = [];
+  if (sgLevels.callWall > 0) sgCandidates.push({ label: "Call Wall", price: sgLevels.callWall });
+  if (sgLevels.putWall > 0) sgCandidates.push({ label: "Put Wall", price: sgLevels.putWall });
+  if (sgLevels.keyGamma > 0) sgCandidates.push({ label: "Key Gamma", price: sgLevels.keyGamma });
+  if (sgLevels.maxGamma > 0) sgCandidates.push({ label: "Max Gamma", price: sgLevels.maxGamma });
+  if (sgLevels.volTrigger > 0) sgCandidates.push({ label: "Vol Trigger", price: sgLevels.volTrigger });
+
+  const nearSG = sgCandidates.find(c => Math.abs(c.price - price) / price < threshold);
+
+  let levelLabel = "";
+  let levelPrice = 0;
+
+  if (nearLevel) {
+    levelLabel = nearLevel.confluenceWithSG ? `${nearLevel.sgLevelType} $${nearLevel.strike.toLocaleString()}` : `GEX $${nearLevel.strike.toLocaleString()} (${nearLevel.hierarchy})`;
+    levelPrice = nearLevel.strike;
+  } else if (nearSG) {
+    levelLabel = `${nearSG.label} $${nearSG.price.toLocaleString()}`;
+    levelPrice = nearSG.price;
+  } else {
+    return null; // Sin nivel GEX cercano
+  }
+
+  const distancePct = Math.abs(price - levelPrice) / price * 100;
+  const levelCFDPrice = toCFD(levelPrice);
+  const consumed = imStatus.consumed;
+
+  return { direction, levelLabel, levelPrice, levelCFDPrice, distancePct, consumed };
+}
+
+// ── Setup 2: OPEX Pin Strike ──────────────────────────────────────────────────
+
+interface OPEXPinSignal {
+  direction: "LONG" | "SHORT";
+  pinStrike: number;
+  pinCFDPrice: number;
+  distancePct: number;
+}
+
+/**
+ * detectOPEXPin: en días de vencimiento de opciones, el precio se "pega"
+ * al strike de Max Gamma. Fadea los movimientos que se alejan del pin.
+ * Solo NAS100 y US30. No aplica en última hora (3pm-4pm ET).
+ */
+function detectOPEXPin(
+  asset: AssetData,
+  sgLevels: OfficialSGLevels | null,
+  cfdTarget: string,
+  cfdPrice: number,
+  opexCtx: OPEXContext,
+  et?: ETTimeInfo,
+): OPEXPinSignal | null {
+  // Solo NAS100 y US30
+  if (cfdTarget === "XAUUSD") return null;
+  if (!sgLevels || cfdPrice <= 0) return null;
+
+  // Solo en días de OPEX
+  if (!opexCtx.isWeeklyOPEX && !opexCtx.is0DTEOPEX) return null;
+
+  // Verificar que no sea la última hora (3pm-4pm ET)
+  const t = et || getETTime();
+  // Bloquear 3pm-4pm ET (900-960 mins)
+  if (t.etMins >= 900) return null;
+
+  const price = asset.currentPrice;
+  if (price <= 0) return null;
+
+  // Pin strike = maxGamma o keyGamma
+  const pinStrike = sgLevels.maxGamma > 0 ? sgLevels.maxGamma : (sgLevels.keyGamma > 0 ? sgLevels.keyGamma : 0);
+  if (pinStrike <= 0) return null;
+
+  const distancePct = Math.abs(price - pinStrike) / price * 100;
+
+  // Threshold: entre 0.2% y 1.5% del pin
+  if (distancePct < 0.2 || distancePct > 1.5) return null;
+
+  const direction: "LONG" | "SHORT" = price > pinStrike ? "SHORT" : "LONG";
+  const pinCFDPrice = cfdPrice + (pinStrike - price) / price * cfdPrice;
+
+  return { direction, pinStrike, pinCFDPrice, distancePct };
+}
+
+// ── Setup 3: HIRO Divergence ──────────────────────────────────────────────────
+
+interface HIRODivergenceSignal {
+  direction: "LONG" | "SHORT";
+  hiroSignal: "bullish" | "bearish";
+  pricePct: number;
+  strength: "strong" | "moderate" | "weak";
+}
+
+/**
+ * detectHIRODivergence: HIRO muestra flujo de opciones fuertemente direccional
+ * OPUESTO al movimiento reciente del precio → señal de reversión.
+ * Solo activa si la divergencia es "strong".
+ */
+function detectHIRODivergence(
+  asset: AssetData,
+  hiro: HiroData | null,
+  cfdTarget: string,
+  group: { assets: string[] },
+): HIRODivergenceSignal | null {
+  if (!hiro) return null;
+
+  const dailyChangePct = asset.dailyChangePct || 0;
+
+  // Necesitamos un movimiento de precio significativo (±0.5%)
+  if (Math.abs(dailyChangePct) < 0.5) return null;
+
+  // Revisar el HIRO del asset primario y del grupo
+  const primaryHiro = hiro.perAsset?.[asset.symbol];
+  if (!primaryHiro) return null;
+
+  const hiroTrend = primaryHiro.hiroTrend;
+
+  // Contar consenso del grupo para determinar fortaleza
+  let hiroBullishCount = 0;
+  let hiroBearishCount = 0;
+  let groupTotal = 0;
+  for (const sym of group.assets) {
+    const h = hiro.perAsset?.[sym];
+    if (h) {
+      groupTotal++;
+      if (h.hiroTrend === "bullish") hiroBullishCount++;
+      else if (h.hiroTrend === "bearish") hiroBearishCount++;
+    }
+  }
+
+  // Solo activar si hay consenso fuerte del grupo también
+  const hiroMajority = hiroBullishCount > hiroBearishCount ? "bullish" : hiroBearishCount > hiroBullishCount ? "bearish" : "neutral";
+  if (hiroMajority === "neutral") return null;
+
+  // Divergencia LONG: precio cayendo + HIRO bullish
+  if (dailyChangePct < -0.5 && hiroMajority === "bullish") {
+    // Determinar fortaleza: grupo unánime = strong, mayoría = moderate
+    const strength: "strong" | "moderate" | "weak" = (hiroBullishCount === groupTotal && groupTotal > 0) ? "strong"
+      : hiroBullishCount > hiroBearishCount ? "moderate" : "weak";
+    if (strength === "weak") return null; // Allow both strong and moderate
+    return { direction: "LONG", hiroSignal: "bullish", pricePct: dailyChangePct, strength };
+  }
+
+  // Divergencia SHORT: precio subiendo + HIRO bearish
+  if (dailyChangePct > 0.5 && hiroMajority === "bearish") {
+    const strength: "strong" | "moderate" | "weak" = (hiroBearishCount === groupTotal && groupTotal > 0) ? "strong"
+      : hiroBearishCount > hiroBullishCount ? "moderate" : "weak";
+    if (strength === "weak") return null; // Allow both strong and moderate
+    return { direction: "SHORT", hiroSignal: "bearish", pricePct: dailyChangePct, strength };
+  }
+
+  return null;
+}
+
+// ── Setup 4: Gamma Squeeze ────────────────────────────────────────────────────
+
+interface GammaSqueezeSignal {
+  direction: "LONG" | "SHORT";
+  flipLevel: number;
+  flipCFDPrice: number;
+  momentum: number; // dailyChangePct
+}
+
+/**
+ * detectGammaSqueeze: precio cruzó el Gamma Flip con momentum fuerte →
+ * dealers deben cubrir agresivamente, amplificando el movimiento.
+ * Solo en régimen negative o very_negative.
+ * NO aplica si ya hay breakout del mismo lado.
+ */
+function detectGammaSqueeze(
+  asset: AssetData,
+  sgLevels: OfficialSGLevels | null,
+  cfdTarget: string,
+  cfdPrice: number,
+  gammaRegime: string,
+  gammaFlipLevel: number,
+  hasBreakout: boolean,
+): GammaSqueezeSignal | null {
+  if (!sgLevels || cfdPrice <= 0) return null;
+  if (gammaFlipLevel <= 0) return null;
+
+  // Solo en régimen negativo
+  if (gammaRegime !== "negative" && gammaRegime !== "very_negative") return null;
+
+  // FIX 10: gammaFlipLevel for XAUUSD is in GLD ETF scale (~$300).
+  // price (asset.currentPrice) is also GLD. toCFD conversion handles the scale correctly.
+  const price = asset.currentPrice;
+  if (price <= 0) return null;
+
+  const dailyChangePct = asset.dailyChangePct || 0;
+
+  // Determinar dirección del squeeze por momentum
+  let direction: "LONG" | "SHORT";
+  if (dailyChangePct >= 0.8) {
+    direction = "LONG"; // Squeeze alcista
+  } else if (dailyChangePct <= -0.8) {
+    direction = "SHORT"; // Squeeze bajista
+  } else {
+    return null; // Sin momentum suficiente
+  }
+
+  // No aplicar si ya hay breakout del mismo lado
+  if (hasBreakout) return null;
+
+  // El precio debe estar del lado del cruce (a menos de 0.5% del flip)
+  const distPct = Math.abs(price - gammaFlipLevel) / price * 100;
+  if (distPct > 0.5) return null;
+
+  // Verificar que cruzó en la dirección correcta
+  // LONG squeeze: precio debe estar por ENCIMA del flip (acaba de cruzar hacia arriba)
+  // SHORT squeeze: precio debe estar por DEBAJO del flip (acaba de cruzar hacia abajo)
+  if (direction === "LONG" && price < gammaFlipLevel) return null;
+  if (direction === "SHORT" && price > gammaFlipLevel) return null;
+
+  const flipCFDPrice = cfdPrice + (gammaFlipLevel - price) / price * cfdPrice;
+
+  return { direction, flipLevel: gammaFlipLevel, flipCFDPrice, momentum: dailyChangePct };
+}
+
+// ── Setup 5: Charm Flow ───────────────────────────────────────────────────────
+
+interface CharmFlowSignal {
+  direction: "LONG" | "SHORT";
+  session: "lunes_apertura" | "viernes_cierre";
+  reason: string;
+}
+
+/**
+ * detectCharmFlow: charm decay de opciones genera flujo direccional predecible.
+ * - Lunes apertura (9:30-11:00 ET): flujo alcista (si mercado no cayó >-0.5%)
+ * - Viernes cierre (2:00-3:30 ET): flujo bajista en índices al cierre
+ * Solo NAS100 y US30.
+ */
+function detectCharmFlow(
+  cfdTarget: string,
+  dailyChangePct: number,
+  et?: ETTimeInfo,
+): CharmFlowSignal | null {
+  // Solo NAS100 y US30
+  if (cfdTarget === "XAUUSD") return null;
+
+  // Use cached ET time or calculate
+  const t = et || getETTime();
+  const dow = t.dow;
+  const etMins = t.etMins;
+
+  // Lunes apertura: 9:30-11:00 ET (570-660 mins)
+  if (dow === 1 && etMins >= 570 && etMins < 660) {
+    // Flujo alcista si mercado no cayó más de -0.5%
+    if (dailyChangePct > -0.5) {
+      return {
+        direction: "LONG",
+        session: "lunes_apertura",
+        reason: `Charm decay lunes: opciones vendidas el viernes decaen → flujo alcista (mercado ${dailyChangePct >= 0 ? "+" : ""}${dailyChangePct.toFixed(2)}%)`,
+      };
+    }
+  }
+
+  // Viernes cierre: 2:00-3:30 ET (840-930 mins)
+  if (dow === 5 && etMins >= 840 && etMins < 930) {
+    return {
+      direction: "SHORT",
+      session: "viernes_cierre",
+      reason: `Charm decay viernes: dealers venden opciones al vencimiento → presión bajista cierre (${dailyChangePct >= 0 ? "+" : ""}${dailyChangePct.toFixed(2)}%)`,
+    };
+  }
+
+  return null;
+}
+
+// ── NEW SETUP: News Reaction ──────────────────────────────────────────────────
+
+interface NewsReactionSignal {
+  direction: "LONG" | "SHORT";
+  event: string;
+  minutesSinceRelease: number;
+  priceReaction: number;  // % move since release
+}
+
+/**
+ * detectNewsReaction: después de una noticia macro (FOMC, CPI, NFP),
+ * si el precio reacciona fuertemente Y confirma dirección con HIRO → trade de momentum.
+ * Solo activa 5-60 minutos después del release.
+ */
+function detectNewsReaction(
+  asset: AssetData,
+  macroAlert: { isActive: boolean; hasEvent: boolean; hoursUntil: number; event: string; time: string },
+  hiro: HiroData | null,
+  cfdTarget: string,
+  group: { assets: string[] },
+): NewsReactionSignal | null {
+  if (!macroAlert.hasEvent) return null;
+
+  // Only after the event (hoursUntil < 0 means it already happened)
+  const minutesSince = -macroAlert.hoursUntil * 60;
+  if (minutesSince < 5 || minutesSince > 60) return null;  // 5-60 minutes after
+
+  const dailyChangePct = asset.dailyChangePct || 0;
+
+  // Need strong price reaction (> 0.5%)
+  if (Math.abs(dailyChangePct) < 0.5) return null;
+
+  // HIRO must confirm the reaction direction (institutional follow-through)
+  if (!hiro) return null;
+  let hiroBull = 0, hiroBear = 0;
+  for (const sym of group.assets) {
+    const h = hiro.perAsset?.[sym];
+    if (h?.hiroTrend === "bullish") hiroBull++;
+    else if (h?.hiroTrend === "bearish") hiroBear++;
+  }
+
+  let direction: "LONG" | "SHORT";
+  if (dailyChangePct > 0.5 && hiroBull > hiroBear) {
+    direction = "LONG";  // Price up + HIRO confirms = momentum buy
+  } else if (dailyChangePct < -0.5 && hiroBear > hiroBull) {
+    direction = "SHORT";  // Price down + HIRO confirms = momentum sell
+  } else {
+    return null;  // No confirmation
+  }
+
+  return {
+    direction,
+    event: macroAlert.event,
+    minutesSinceRelease: Math.round(minutesSince),
+    priceReaction: dailyChangePct,
+  };
+}
+
+// ── Mejora B: Level Confluence Counter ───────────────────────────────────────
+
+/**
+ * countLevelConfluence: cuenta cuántos niveles GEX están dentro de ±0.3%
+ * del entryStrike para determinar confluencia de zona.
+ * Returns: número de niveles adicionales confluentes (0 si solo hay 1).
+ */
+function countLevelConfluence(
+  entryStrike: number,
+  levels: DecisionLevel[],
+  sgLevels: OfficialSGLevels | null,
+  price: number,
+): { count: number; bonus: number; label: string } {
+  if (entryStrike <= 0 || price <= 0) return { count: 0, bonus: 0, label: "" };
+
+  const zonePct = 0.003; // ±0.3%
+  const zoneAbs = price * zonePct;
+
+  // Contar niveles GEX dentro de la zona
+  const gexInZone = levels.filter(l =>
+    Math.abs(l.strike - entryStrike) <= zoneAbs &&
+    (l.hierarchy === "reaction" || l.hierarchy === "dominant"),
+  );
+
+  // Contar niveles oficiales SG dentro de la zona
+  const sgInZone: string[] = [];
+  if (sgLevels) {
+    const sgMap: [number, string][] = [
+      [sgLevels.callWall, "Call Wall"],
+      [sgLevels.putWall, "Put Wall"],
+      [sgLevels.keyGamma, "Key Gamma"],
+      [sgLevels.maxGamma, "Max Gamma"],
+      [sgLevels.volTrigger, "Vol Trigger"],
+    ];
+    for (const [sgPrice, sgName] of sgMap) {
+      if (sgPrice > 0 && Math.abs(sgPrice - entryStrike) <= zoneAbs) {
+        sgInZone.push(sgName);
+      }
+    }
+  }
+
+  const totalCount = gexInZone.length + sgInZone.length;
+
+  let bonus = 0;
+  let label = "";
+  if (totalCount >= 3) {
+    bonus = 10;
+    label = `[CONFLUENCIA] ${totalCount} niveles en zona $${entryStrike.toLocaleString()} ± 0.3%${sgInZone.length > 0 ? ` (incl. ${sgInZone.slice(0, 2).join(", ")})` : ""}`;
+  } else if (totalCount === 2) {
+    bonus = 5;
+    label = `[CONFLUENCIA] 2 niveles en zona $${entryStrike.toLocaleString()} ± 0.3%${sgInZone.length > 0 ? ` (incl. ${sgInZone[0]})` : ""}`;
+  }
+
+  return { count: totalCount, bonus, label };
+}
+
+// ── Broken Level Memory ──────────────────────────────────────────────────────
+interface BrokenLevelEntry {
+  cfdTarget: string;
+  wallName: string;
+  wallPrice: number;
+  direction: "LONG" | "SHORT";
+  detectedAt: number;
+  flowScore: number;
+  confirmations: number;
+}
+const brokenLevelMemory = new Map<string, BrokenLevelEntry>();
+const BROKEN_LEVEL_TTL_MS = 15 * 60 * 1000;
+
+function cleanBrokenLevelMemory(): void {
+  const now = Date.now();
+  for (const [key, entry] of brokenLevelMemory.entries()) {
+    if (now - entry.detectedAt > BROKEN_LEVEL_TTL_MS) {
+      brokenLevelMemory.delete(key);
+    }
+  }
+}
+
+export function getRetestMemory(): BrokenLevelEntry[] {
+  cleanBrokenLevelMemory();
+  return Array.from(brokenLevelMemory.values());
+}
+
+// ============ MAIN TRADE SETUP GENERATOR ============
+
+export function generateTradeSetups(
+  assets: AssetData[],
+  gex: GexData | null,
+  hiro: HiroData | null,
+  tape: TapeData | null,
+  vixAsset: AssetData | null,
+  uvixAsset: AssetData | null,
+  traceData?: TraceData | null,
+  officialLevels?: Record<string, OfficialSGLevels>,
+  vannaContext?: VannaContext | null,
+  cfdPrices?: CFDPriceData | null,
+  etfGex?: Record<string, TradierGexData>,
+): TradeSetup[] {
+  // ════════════════════════════════════════════════════════════════════════════
+  // PPO PURO TOTAL — El agente decide TODO desde 46 features
+  // Sin reglas, sin detección de señales, sin confirmaciones.
+  // Solo: datos → features → PPO predict → ejecutar
+  // ════════════════════════════════════════════════════════════════════════════
+
+  const setups: TradeSetup[] = [];
+  const etTime = getETTime();
+
+  // Priority order for SpotGamma data per CFD
+  const SG_PRIORITY: Record<string, string[]> = {
+    NAS100: ["SPX", "QQQ", "SPY"],
+    US30: ["DIA", "SPX"],
+    XAUUSD: ["GLD"],
+  };
+
+  for (const cfdTarget of ["NAS100", "US30", "XAUUSD"] as const) {
+    const spec = CFD_SPECS[cfdTarget];
+    if (!spec) continue;
+
+    // 1. Get CFD price
+    const cfdPrice = convertToCFDPrice("", 0, cfdTarget, cfdPrices || null);
+    if (!cfdPrice || cfdPrice <= 0) continue;
+
+    try {
+      const symMap: Record<string, string[]> = {
+        NAS100: ["SPX", "QQQ"], US30: ["DIA"], XAUUSD: ["GLD"],
+      };
+      const syms = symMap[cfdTarget] ?? ["SPX"];
+      let sgForGEX: OfficialSGLevels | null = null;
+      for (const sym of syms) {
+        if (officialLevels?.[sym]) { sgForGEX = officialLevels[sym]; break; }
+      }
+
+      if (sgForGEX && sgForGEX.zeroGamma > 0) {
+        const gammaRatioRaw = (sgForGEX as any).gammaRatio ?? 0.5;
+
+        // RL GEX/Unified states removed (Fase 3 PPO Puro)
+        const ivRankRaw = sgForGEX.ivRank ?? 50;
+        const ivRankNorm = ivRankRaw > 1 ? ivRankRaw / 100 : ivRankRaw;
+        // rlUnifiedState removed (Fase 3 PPO Puro)
+
+        // Store skew/VRP for live learning
+        const rlNeSkewNow = sgForGEX.neSkew ?? 0;
+        const rlVRPNow = sgForGEX.vrp ?? (sgForGEX.atmIV30 - sgForGEX.rv30) ?? 0;
+        const candleSignal = getCachedCandleSignal(cfdTarget);
+
+        // ── Multi-Head PPO: Primary decision agent (81.7% WR) ─────────
+        // Pure JS inference — loads Python-trained weights directly
+        // Multi-head controls ALL decisions: direction, risk, entry, sizing, session
+        const usePureJSInference = isMHInferenceLoaded();
+        const mhAgent = usePureJSInference ? null : getMultiHeadAgent();
+        if (usePureJSInference || (mhAgent && mhAgent.totalEpisodes > 0)) {
+          // Build PPOState from live data — ALL 42 features populated
+          const livePrice = (sgForGEX as any).price ?? 0;
+          const liveHiro = hiro?.perAsset?.[(sgForGEX as any).sym ?? "SPX"];
+          const liveTape = tape?.perAsset?.[(sgForGEX as any).sym ?? "SPX"];
+          const liveImPct = (sgForGEX as any).impliedMovePct ?? ((sgForGEX as any).options_implied_move && livePrice ? (sgForGEX as any).options_implied_move / livePrice * 100 : 1);
+          const nowDow = new Date().getUTCDay();
+          const dayOfWeekNorm = nowDow === 0 ? -1 : nowDow === 6 ? 1 : (nowDow - 3) / 2;
+
+          const livePPOState: PPOState = mhBuildPPOState({
+            gammaTilt: (sgForGEX as any).gammaTilt ?? 0,
+            deltaTilt: (sgForGEX as any).deltaTilt ?? 0,
+            gammaRatioNorm: typeof gammaRatioRaw === "number" ? gammaRatioRaw / (gammaRatioRaw + 1) : 0.5,
+            deltaRatioNorm: (sgForGEX as any).deltaRatio ?? 0.5,
+            ivRank: ivRankNorm,
+            neSkew: sgForGEX.neSkew ?? 0,
+            vrp: (sgForGEX.atmIV30 ?? 0) - (sgForGEX.rv30 ?? sgForGEX.atmIV30 ?? 0),
+            momentum5d: 0, momentum20d: 0, rsi14: 50,
+            squeezeSig: (sgForGEX as any).squeezeSig ?? 0,
+            positionFactor: (sgForGEX as any).positionFactor ?? 0,
+            putCallRatio: (sgForGEX as any).putCallRatio ?? 1.0,
+            volumeRatio: 1.0, atrPct: 1.0,
+            callWall: sgForGEX.callWall ?? 0,
+            putWall: sgForGEX.putWall ?? 0,
+            price: livePrice,
+            isOPEXWeek: false, cfd: cfdTarget,
+            gammaWallDist: 0, gammaConcentration: 0, callGammaRatio: 0.5,
+            nextExpGamma: (sgForGEX as any).next_exp_g ?? 0,
+            nextExpDelta: (sgForGEX as any).next_exp_d ?? 0,
+            // Phase 1 tape features — USE LIVE DATA
+            tapeBullishPct: liveTape ? liveTape.callCount / Math.max(liveTape.totalTrades, 1) : 0.5,
+            tapePremiumRatio: liveTape ? liveTape.callPremium / Math.max(liveTape.totalPremium, 1) : 0.5,
+            tapeGammaSkew: liveTape ? (liveTape.netGamma > 0 ? 1 : liveTape.netGamma < 0 ? -1 : 0) * Math.min(1, Math.abs(liveTape.netGamma) / 1e6) : 0,
+            // Phase 2 features — ALL LIVE DATA
+            candleBodyRatio: candleSignal ? Math.abs(candleSignal.score) / 100 : 0.5,
+            candleTrend: candleSignal ? (candleSignal.score > 0 ? 1 : candleSignal.score < 0 ? -1 : 0) : 0,
+            candleVolSpike: 1, // would need twelve_series volume data
+            impliedMovePct: liveImPct,
+            impliedMoveUsage: 1, // can't compute live without intraday move
+            comboLevelDist: 0, // would need live comboLevels fetch
+            comboLevelSide: 0,
+            absGammaPeakDist: 0, // would need live absGammaLevels
+            absGammaSkew: 0,
+            hiroNorm: liveHiro ? (liveHiro.hiroRange30dMax !== liveHiro.hiroRange30dMin
+              ? (liveHiro.hiroValue - liveHiro.hiroRange30dMin) / (liveHiro.hiroRange30dMax - liveHiro.hiroRange30dMin) * 2 - 1
+              : 0) : 0,
+            hiroAccel: 0, // would need previous HIRO value to compute
+            volumeProfilePOC: 0,
+            volumeImbalance: 0.5,
+            dayOfWeek: dayOfWeekNorm,
+            // Context features (Fase 3 PPO Puro)
+            sessionType: etTime.etMins < 570 || etTime.etMins >= 960 ? 5
+              : etTime.etMins < 600 ? 0   // open
+              : etTime.etMins < 690 ? 1   // am_trend
+              : etTime.etMins < 870 ? 2   // lunch
+              : etTime.etMins < 900 ? 3   // retoma
+              : 4,                         // power_hour
+            macroAlertActive: !!(getMacroAlert?.()?.isActive),
+            counterTrendDetected: false,  // computed later; will learn from outcomes
+            imExhaustionLevel: 0,         // computed later; will learn from outcomes
+          }, (etTime.etH + etTime.utcM / 60) / 24);
+
+          // Use pure JS inference (Python-trained, 81.7% WR) or TF.js fallback
+          let mhDecision: MultiHeadDecision | MHInferenceResult;
+          if (usePureJSInference) {
+            const normalized = normalizeForInference(livePPOState);
+            const result = mhInferencePredict(normalized);
+            if (!result) throw new Error("Pure JS inference failed");
+            mhDecision = result;
+            console.log(`[MH-PPO] ${cfdTarget}: dir=${mhDecision.direction} risk=${mhDecision.risk} entry=${mhDecision.entry} sizing=${mhDecision.sizing} session=${mhDecision.session} conf=${mhDecision.confidence.toFixed(1)}% [Python model, 81.7% WR]`);
+          } else {
+            mhDecision = mhAgent!.selectBest(livePPOState);
+            console.log(`[MH-PPO] ${cfdTarget}: dir=${mhDecision.direction} risk=${mhDecision.risk} entry=${mhDecision.entry} sizing=${mhDecision.sizing} session=${mhDecision.session} conf=${mhDecision.confidence.toFixed(1)}% [TF.js]`);
+          }
+
+          // Session head says wait → skip
+          // Only WAIT if the session head is highly confident (>60%) about waiting
+          // Otherwise, trust the direction head
+          const waitProb = mhDecision.headProbs?.session?.[1] ?? 0; // index 1 = "wait"
+          if (mhDecision.session === "wait" && waitProb > 0.60) {
+            console.log(`[MH-PPO] ${cfdTarget}: WAIT — red neuronal decide esperar (wait_prob=${(waitProb*100).toFixed(1)}%)`);
+            continue;
+          }
+
+          // Direction = SKIP → skip
+          if (mhDecision.direction === "SKIP") {
+            console.log(`[MH-PPO] ${cfdTarget}: SKIP — red neuronal decide no operar`);
+            continue;
+          }
+
+          // ── PPO Puro: create fullRLDecision shim from mhDecision ────────
+          // (shim maintains compatibility with downstream code that reads fullRLDecision)
+          fullRLDecision = {
+            direction: mhDecision.direction,
+            overallConfidence: mhDecision.confidence,
+            isExploring: false,
+            riskProfile: mhDecision.risk,
+            slMultiplier: mhDecision.slMultiplier,
+            tp1Pct: mhDecision.tp1Multiplier,
+            tp2Pct: mhDecision.tp2Multiplier,
+            tp3Pct: mhDecision.tp3Multiplier,
+            entryLevelType: mhDecision.entry === "at_wall" ? "dominant" : mhDecision.entry === "at_level" ? "reaction" : "key",
+            _mhDecision: mhDecision,
+            _mhEntryType: mhDecision.entry,
+            _mhSizing: mhDecision.sizing,
+            _mhRiskPct: mhDecision.riskPct,
+          } as any;
+
+          // Store PPO state for online learning when trade resolves
+          if ('headProbs' in mhDecision && mhDecision.headProbs) {
+            const entryHeadActions: Record<string, number> = {};
+            const entryHeadLogProbs: Record<string, number> = {};
+            const headNames = ["direction", "risk", "entry", "sizing", "session", "overExtension", "entryQuality", "scoreThreshold"] as const;
+            for (const name of headNames) {
+              const probs = mhDecision.headProbs[name as keyof typeof mhDecision.headProbs];
+              if (!probs) continue;
+              let best = 0;
+              for (let j = 1; j < probs.length; j++) { if (probs[j] > probs[best]) best = j; }
+              entryHeadActions[name] = best;
+              entryHeadLogProbs[name] = Math.log(Math.max(probs[best], 1e-8));
+            }
+            (fullRLDecision as any)._ppoStateAtEntry = normalizeForInference(livePPOState);
+            (fullRLDecision as any)._ppoHeadActions = entryHeadActions;
+            (fullRLDecision as any)._ppoHeadLogProbs = entryHeadLogProbs;
+            (fullRLDecision as any)._ppoRisk = mhDecision.risk;
+          }
+
+          // No fallbacks: PPO Multi-Head is the ONLY decision maker (Fase 2 PPO Puro)
+        }
+      }
+    } catch (e: any) {
+      console.warn(`[PPO] Error for ${cfdTarget}: ${e.message}`);
+    }
+
+    // Build cross-asset consensus
+    const consensus = buildCrossAssetConsensus(cfdTarget, assets, gex, hiro, officialLevels || {});
+
+    // Find the primary analysis asset (the one with best data)
+    let primaryAsset: AssetData | null = null;
+    let primarySGLevels: OfficialSGLevels | null = null;
+
+    // For NAS100: prefer SPX (best gamma data), then QQQ
+    // For US30: prefer DIA
+    // For XAUUSD: GLD
+    const priorityOrder: Record<string, string[]> = {
+      NAS100: ["SPX", "QQQ", "SPY"],
+      US30: ["DIA", "SPX", "SPY"],
+      XAUUSD: ["GLD"],
+    };
+
+    for (const sym of (priorityOrder[cfdTarget] || [])) {
+      const asset = assets.find(a => a.symbol === sym && a.currentPrice > 0);
+      if (asset) {
+        primaryAsset = asset;
+        primarySGLevels = officialLevels?.[sym] || null;
+        break;
+      }
+    }
+
+    if (!primaryAsset) continue;
+
+    // Skip if analysis price is suspiciously low (market closed / stale data)
+    const minPrices: Record<string, number> = { SPX: 1000, SPY: 100, QQQ: 100, DIA: 100, GLD: 50 };
+    if (primaryAsset.currentPrice < (minPrices[primaryAsset.symbol] || 10)) {
+      console.log(`[TRADES] Skipping ${cfdTarget}: ${primaryAsset.symbol} price $${primaryAsset.currentPrice} too low (stale data)`);
+      continue;
+    }
+
+    const hasGex = GEX_ELIGIBLE_ASSETS.includes(primaryAsset.symbol);
+
+    // 1. Classify decision levels with SG level confluence
+    const levels = classifyDecisionLevels(primaryAsset, hasGex ? gex : null, primarySGLevels);
+
+    // 1b. Add cross-asset strike levels (SPY+QQQ for NAS100, SPX+SPY for US30)
+    if (cfdTarget === "NAS100" || cfdTarget === "US30") {
+      const companions = group.assets
+        .filter(sym => sym !== primaryAsset.symbol)
+        .map(sym => assets.find(a => a.symbol === sym))
+        .filter(Boolean) as AssetData[];
+      const crossLevels = getCrossAssetDecisionLevels(primaryAsset, companions);
+      // Merge: add cross-asset levels, avoid duplicates within 0.15%
+      for (const cl of crossLevels) {
+        const dup = levels.some(l => Math.abs(l.strike - cl.strike) / primaryAsset.currentPrice < 0.0015);
+        if (!dup) {
+          levels.push(cl);
+        } else {
+          // If duplicate, mark existing level as cross-asset confirmed
+          const existing = levels.find(l => Math.abs(l.strike - cl.strike) / primaryAsset.currentPrice < 0.0015);
+          if (existing) {
+            existing.confluenceWithSG = true;
+            existing.sgLevelType = existing.sgLevelType
+              ? `${existing.sgLevelType} + ${cl.sgLevelType}`
+              : cl.sgLevelType;
+            if (existing.hierarchy === "minor") existing.hierarchy = "reaction";
+          }
+        }
+      }
+      // Re-sort by distance
+      levels.sort((a, b) => a.distanceFromPrice - b.distanceFromPrice);
+    }
+
+    // 2. Volatility analysis
+    const volAnalysis = analyzeVolatility(primaryAsset, vixAsset, uvixAsset || null);
+
+    // 3. Find actionable levels
+    // GLD y DIA usan threshold absoluto en dólares del ETF ($0.50).
+    // NAS100 (SPX) usa porcentaje porque sus strikes están en $5 incrementos (SPX ~$6500, 0.15% ≈ $9.75).
+    // Sort: dominant first, then by gamma magnitude — distance is a filter, NOT the selector.
+    const LEVEL_DIST_ABS: Partial<Record<string, number>> = {
+      XAUUSD: 0.50,  // GLD @ ~$413 → $0.50 es ~0.12%
+      US30:   0.50,  // DIA @ ~$456 → $0.50 es ~0.11%
+    };
+    const LEVEL_DIST_PCT: Record<string, number> = {
+      NAS100: 0.15,  // SPX @ ~$6500 → 0.15% ≈ $9.75
+    };
+    const rlProxMult = 1.0; // PPO Puro: no proximity multiplier from RL
+    const maxDistAbs = LEVEL_DIST_ABS[cfdTarget] !== undefined
+      ? LEVEL_DIST_ABS[cfdTarget]! * rlProxMult : undefined;
+    const maxDistPct = (LEVEL_DIST_PCT[cfdTarget] ?? 0.15) * rlProxMult;
+    const nativeWithinThreshold = (l: DecisionLevel) =>
+      maxDistAbs !== undefined
+        ? l.distanceFromPrice <= maxDistAbs
+        : l.distancePct < maxDistPct;
+    const hierRank = { dominant: 2, reaction: 1, minor: 0 } as const;
+    // Cross-asset: threshold absoluto de $0.50 en escala del companion (QQQ/SPY).
+    // Así si QQQ top strike está a $0.30 del precio → entra. Si está a $0.80 → no entra.
+    const CROSS_ASSET_ABS_THRESHOLD = 0.50;  // dólares
+    const CROSS_ASSET_NEAR_THRESHOLD = 1.00; // para nearLevels (zona de vigilancia)
+    const actionableLevels = levels
+      .filter(l => {
+        if (l.isCrossAsset) {
+          return (l.companionAbsDist ?? Infinity) <= CROSS_ASSET_ABS_THRESHOLD &&
+                 (l.hierarchy === "reaction" || l.hierarchy === "dominant");
+        }
+        return nativeWithinThreshold(l) && (l.hierarchy === "reaction" || l.hierarchy === "dominant");
+      })
+      .sort((a, b) => {
+        // Top strikes ALWAYS first — they have the highest absolute gamma near price
+        if (a.isTopStrike !== b.isTopStrike) return a.isTopStrike ? -1 : 1;
+        // Within top strikes: rank 1 > 2 > 3
+        if (a.isTopStrike && b.isTopStrike) return (a.topStrikeRank ?? 99) - (b.topStrikeRank ?? 99);
+        // Non-top-strikes: hierarchy then distance
+        const hDiff = hierRank[b.hierarchy] - hierRank[a.hierarchy];
+        if (hDiff !== 0) return hDiff;
+        if (a.isCrossAsset !== b.isCrossAsset) return a.isCrossAsset ? 1 : -1;
+        const distA = a.isCrossAsset ? (a.companionAbsDist ?? 999) : a.distancePct;
+        const distB = b.isCrossAsset ? (b.companionAbsDist ?? 999) : b.distancePct;
+        return distA - distB;
+      });
+    const nearLevels = levels.filter(l => {
+      if (l.isCrossAsset) return (l.companionAbsDist ?? Infinity) <= CROSS_ASSET_NEAR_THRESHOLD;
+      // nearLevels: 1.5× el threshold (zona de vigilancia)
+      if (maxDistAbs !== undefined) return l.distanceFromPrice <= maxDistAbs * 1.5;
+      return l.distancePct < maxDistPct * 1.5;
+    });
+
+    // 4. Determine trade direction
+    let direction: TradeSetup["direction"] = "NO_TRADE";
+    let tradeType: TradeType = "gamma";
+    let entryLevel: DecisionLevel | null = null;
+    let reason = "";
+    const details: string[] = [];
+
+    // Check cross-asset consensus first
+    if (consensus && consensus.consensusStrength !== "none") {
+      if (consensus.direction === "LONG") {
+        direction = "LONG";
+        reason = `Consenso cruzado ${consensus.consensusStrength.toUpperCase()}: ${consensus.details.join(" | ")}`;
+        tradeType = "cross_asset";
+      } else if (consensus.direction === "SHORT") {
+        direction = "SHORT";
+        reason = `Consenso cruzado ${consensus.consensusStrength.toUpperCase()}: ${consensus.details.join(" | ")}`;
+        tradeType = "cross_asset";
+      }
+    }
+
+    // Refine with actionable levels
+    if (actionableLevels.length > 0) {
+      entryLevel = actionableLevels[0];
+      if (entryLevel.bias === "buy" && entryLevel.biasScore >= 55) {
+        if (direction !== "SHORT") { // Don't override strong short consensus
+          direction = "LONG";
+          tradeType = entryLevel.confluenceWithSG ? "gamma" : "gamma";
+          reason = `Nivel $${entryLevel.strike.toLocaleString()} (${entryLevel.hierarchy}${entryLevel.confluenceWithSG ? ` + ${entryLevel.sgLevelType}` : ""}) sesgo COMPRA (${entryLevel.biasScore}/100). ${reason}`;
+        }
+      } else if (entryLevel.bias === "sell" && entryLevel.biasScore <= 45) {
+        if (direction !== "LONG") {
+          direction = "SHORT";
+          tradeType = "gamma";
+          reason = `Nivel $${entryLevel.strike.toLocaleString()} (${entryLevel.hierarchy}${entryLevel.confluenceWithSG ? ` + ${entryLevel.sgLevelType}` : ""}) sesgo VENTA (${entryLevel.biasScore}/100). ${reason}`;
+        }
+      }
+    } else if (nearLevels.length > 0 && direction === "NO_TRADE") {
+      entryLevel = nearLevels[0];
+      reason = `Precio acercandose a $${entryLevel.strike.toLocaleString()} (${entryLevel.hierarchy}, ${entryLevel.distancePct.toFixed(2)}%).`;
+    }
+
+    // Check for Vanna-driven trades
+    if (vannaContext) {
+      if (cfdTarget === "NAS100" || cfdTarget === "US30") {
+        if (vannaContext.indexVannaActive) {
+          if (vannaContext.vixVannaSignal === "bullish" && direction !== "SHORT") {
+            if (direction === "NO_TRADE") direction = "LONG";
+            tradeType = "vanna_index";
+            reason += ` | Vanna ALCISTA: VIX ${vannaContext.vixChangePct.toFixed(1)}%`;
+          } else if (vannaContext.vixVannaSignal === "bearish" && direction !== "LONG") {
+            if (direction === "NO_TRADE") direction = "SHORT";
+            tradeType = "vanna_index";
+            reason += ` | Vanna BAJISTA: VIX +${Math.abs(vannaContext.vixChangePct).toFixed(1)}%`;
+          }
+        }
+      } else if (cfdTarget === "XAUUSD") {
+        // Gold: Check IV-based vanna AND refuge flow
+        if (vannaContext.goldVannaActive) {
+          if (vannaContext.gldVannaSignal === "bullish" && direction !== "SHORT") {
+            if (direction === "NO_TRADE") direction = "LONG";
+            tradeType = "vanna_gold";
+            reason += ` | Vanna GLD ALCISTA: IV cayendo`;
+          } else if (vannaContext.gldVannaSignal === "bearish" && direction !== "LONG") {
+            if (direction === "NO_TRADE") direction = "SHORT";
+            tradeType = "vanna_gold";
+            reason += ` | Vanna GLD BAJISTA: IV subiendo`;
+          }
+        }
+        if (vannaContext.refugeFlowActive) {
+          if (direction !== "SHORT") {
+            direction = "LONG";
+            tradeType = "refuge";
+            reason += ` | FLUJO REFUGIO: UVXY +${vannaContext.uvxyChangePct.toFixed(1)}% + GLD HIRO positivo`;
+          }
+        }
+      }
+    }
+
+    // ── Hard gate: no setup without a nearby level ─────────────────────────────
+    // If no actionable level exists within 0.8% → the price is in open air.
+    // Vanna or cross-asset consensus alone is NOT enough to enter — we need
+    // a structural gamma level to anchor SL/TP and validate the setup.
+    if (!entryLevel) {
+      direction = "NO_TRADE";
+      const closestDist = levels.length > 0
+        ? Math.min(...levels.map(l => l.distancePct)).toFixed(2)
+        : "N/A";
+      reason = `Precio lejos de niveles de gamma (nivel más cercano: ${closestDist}%). No operar.`;
+    }
+
+    // ── BREAKOUT OVERRIDE ──────────────────────────────────────────────────
+    // In negative/very_negative gamma, key SG walls tend to BREAK, not hold.
+    // If price is near a wall and institutional flow confirms the break →
+    // generate a breakout trade through the wall instead of a bounce off it.
+    // RL Policy: if setupTypeFilter = "bounce_only", skip breakout detection
+    let breakoutSignal: BreakoutSignal | null = null;
+    const rlSkipBreakout = false; // PPO Puro: no setup type filter
+    if (!rlSkipBreakout && primarySGLevels && (primarySGLevels.gammaRegime === "negative" || primarySGLevels.gammaRegime === "very_negative")) {
+      breakoutSignal = detectBreakout(
+        primaryAsset, primarySGLevels, cfdTarget, cfdPrice,
+        levels, hiro, tape, vannaContext || null, group.assets,
+        traceData || null, etfGex, vixAsset?.currentPrice || 20,
+      );
+      if (breakoutSignal) {
+        direction = breakoutSignal.direction;
+        tradeType = "breakout";
+        reason = breakoutSignal.reason;
+        // Use wall level as entry level, or create synthetic one from SG wall
+        if (breakoutSignal.wallLevel) {
+          entryLevel = breakoutSignal.wallLevel;
+        } else {
+          entryLevel = {
+            strike: breakoutSignal.wallPrice,
+            hierarchy: "dominant",
+            bias: breakoutSignal.direction === "SHORT" ? "sell" : "buy",
+            biasScore: breakoutSignal.direction === "SHORT" ? 15 : 85,
+            gammaNotional: 0,
+            callGammaNotional: 0,
+            putGammaNotional: 0,
+            outlierScore: 0,
+            distanceFromPrice: Math.abs(primaryAsset.currentPrice - breakoutSignal.wallPrice),
+            distancePct: Math.abs(primaryAsset.currentPrice - breakoutSignal.wallPrice) / primaryAsset.currentPrice * 100,
+            isNearPrice: true,
+            dealerExposure: "short_gamma",
+            netPositioning: 0,
+            flowBias: breakoutSignal.direction === "SHORT" ? "bearish" : "bullish",
+            confluenceWithSG: true,
+            sgLevelType: breakoutSignal.wallName,
+            isTopStrike: false,
+          };
+        }
+        details.push(`[RUPTURA] ${breakoutSignal.reason}`);
+        console.log(`[TRADES] Breakout detected: ${cfdTarget} ${breakoutSignal.direction} through ${breakoutSignal.wallName} $${breakoutSignal.wallPrice} (${breakoutSignal.flowScore}/5 flow)`);
+      }
+    }
+
+    // Guardar breakout en memoria / actualizar confirmaciones
+    cleanBrokenLevelMemory();
+    if (breakoutSignal) {
+      const memKey = `${cfdTarget}-${breakoutSignal.wallPrice}`;
+      const existing = brokenLevelMemory.get(memKey);
+      brokenLevelMemory.set(memKey, {
+        cfdTarget,
+        wallName: breakoutSignal.wallName,
+        wallPrice: breakoutSignal.wallPrice,
+        direction: breakoutSignal.direction,
+        detectedAt: existing?.detectedAt ?? Date.now(),
+        flowScore: Math.max(existing?.flowScore ?? 0, breakoutSignal.flowScore),
+        confirmations: (existing?.confirmations ?? 0) + 1,
+      });
+    } else {
+      // Revisar si hay un nivel roto en memoria para este CFD
+      for (const [key, entry] of brokenLevelMemory.entries()) {
+        if (key.startsWith(`${cfdTarget}-`)) {
+          entry.confirmations++;
+          const minsAgo = Math.round((Date.now() - entry.detectedAt) / 60000);
+          details.push(`[MEM] ${entry.wallName} $${entry.wallPrice} roto hace ${minsAgo}min → ${entry.direction} (${entry.confirmations} ciclos)`);
+          // Si hay suficientes confirmaciones y no hay breakout actual, usar el nivel de memoria
+          if (entry.confirmations >= 3 && direction === "NO_TRADE") {
+            direction = entry.direction;
+            tradeType = "breakout";
+            reason = `🔁 RETEST ${entry.wallName} $${entry.wallPrice} (roto hace ${minsAgo}min, ${entry.confirmations} ciclos confirmados)`;
+            entryLevel = {
+              strike: entry.wallPrice,
+              hierarchy: "dominant" as const,
+              bias: entry.direction === "SHORT" ? "sell" as const : "buy" as const,
+              biasScore: entry.direction === "SHORT" ? 15 : 85,
+              gammaNotional: 0, callGammaNotional: 0, putGammaNotional: 0,
+              outlierScore: 0,
+              distanceFromPrice: Math.abs(primaryAsset.currentPrice - entry.wallPrice),
+              distancePct: Math.abs(primaryAsset.currentPrice - entry.wallPrice) / primaryAsset.currentPrice * 100,
+              isNearPrice: true,
+              dealerExposure: entry.direction === "SHORT" ? "short_gamma" as const : "long_gamma" as const,
+              netPositioning: 0,
+              flowBias: entry.direction === "SHORT" ? "bearish" as const : "bullish" as const,
+              confluenceWithSG: true,
+              sgLevelType: `Retest ${entry.wallName}`,
+              isTopStrike: false,
+            };
+          }
+          break;
+        }
+      }
+    }
+
+    // ── BOUNCE DETECTION ──────────────────────────────────────────────────────
+    // When price bounces from a key GEX support level (Put Wall, Gamma Flip,
+    // Vol Trigger, Zero Gamma), generate a tactical LONG with conservative targets.
+    // Only triggers if no breakout already detected and current direction isn't LONG.
+    // RL Policy: if setupTypeFilter = "breakout_only", skip bounce detection
+    let bounceSignal: BounceSignal | null = null;
+    const rlSkipBounce = false; // PPO Puro: no setup type filter
+    const bounceSignals: BounceSignal[] = (!rlSkipBounce && primarySGLevels)
+      ? detectBounce(primaryAsset, primarySGLevels, levels, cfdTarget, cfdPrice, etfGex)
+      : [];
+    bounceSignal = bounceSignals[0] ?? null;
+    if (!breakoutSignal && primarySGLevels) {
+      // Apply bounce if it differs from current direction OR direction is NO_TRADE.
+      // Never override a strong consensus (3/3 assets) with the opposite direction.
+      const bDir = bounceSignal?.direction;
+      const consensusStrong = consensus?.consensusStrength === "strong";
+      const bounceApplies = bounceSignal && bDir &&
+        !(consensusStrong && consensus?.direction !== "NEUTRAL" && bDir !== consensus?.direction);
+      if (bounceApplies && bounceSignal && bDir) {
+        direction = bDir;
+        tradeType = "bounce";
+        reason = bounceSignal.reason;
+        const isBuy = bDir === "LONG";
+        entryLevel = {
+          strike:             bounceSignal.levelPrice,
+          hierarchy:          "dominant",
+          bias:               isBuy ? "buy" : "sell",
+          biasScore:          isBuy ? 80 : 20,
+          gammaNotional:      0,
+          callGammaNotional:  0,
+          putGammaNotional:   0,
+          outlierScore:       0,
+          distanceFromPrice:  Math.abs(primaryAsset.currentPrice - bounceSignal.levelPrice),
+          distancePct:        bounceSignal.distancePct,
+          isNearPrice:        true,
+          dealerExposure:     isBuy ? "long_gamma" : "short_gamma",
+          netPositioning:     0,
+          flowBias:           isBuy ? "bullish" : "bearish",
+          confluenceWithSG:   true,
+          sgLevelType:        bounceSignal.levelLabel,
+          isTopStrike:        false,
+        };
+        const tag = bDir === "LONG" ? "[REBOTE]" : "[RECHAZO]";
+        details.push(`${tag} ${bounceSignal.reason}`);
+        console.log(`[TRADES] Bounce/rejection: ${cfdTarget} ${bDir} at ${bounceSignal.levelLabel} $${bounceSignal.levelPrice} (${bounceSignal.distancePct.toFixed(2)}%)`);
+      }
+    }
+
+    // ── OPEX CONTEXT (Mejora C) ─────────────────────────────────────────────
+    const opexCtx = getOPEXContext();
+
+    // ── IM EXHAUSTION ────────────────────────────────────────────────────────
+    // Calcular imStatus early para usarlo en detectIMExhaustion
+    const imStatusEarly = getImpliedMoveStatus(
+      primaryAsset.symbol,
+      primarySGLevels?.impliedMovePct || 0,
+    );
+    if (!breakoutSignal && !bounceSignal) {
+      const imExhSignal = detectIMExhaustion(
+        primaryAsset, primarySGLevels, levels, cfdTarget, cfdPrice, imStatusEarly,
+      );
+      if (imExhSignal) {
+        direction = imExhSignal.direction;
+        tradeType = "im_exhaustion";
+        reason = `⚡ AGOTAMIENTO ${(imExhSignal.consumed * 100).toFixed(0)}% implied move — reversión desde nivel GEX ${imExhSignal.levelLabel}`;
+        const isBuy = imExhSignal.direction === "LONG";
+        entryLevel = {
+          strike:            imExhSignal.levelPrice,
+          hierarchy:         "dominant",
+          bias:              isBuy ? "buy" : "sell",
+          biasScore:         isBuy ? 80 : 20,
+          gammaNotional:     0,
+          callGammaNotional: 0,
+          putGammaNotional:  0,
+          outlierScore:      0,
+          distanceFromPrice: Math.abs(primaryAsset.currentPrice - imExhSignal.levelPrice),
+          distancePct:       imExhSignal.distancePct,
+          isNearPrice:       true,
+          dealerExposure:    isBuy ? "long_gamma" : "short_gamma",
+          netPositioning:    0,
+          flowBias:          isBuy ? "bullish" : "bearish",
+          confluenceWithSG:  true,
+          sgLevelType:       imExhSignal.levelLabel,
+          isTopStrike:       false,
+        };
+        details.push(`[IM_EXHAUSTION] ${(imExhSignal.consumed * 100).toFixed(0)}% del implied move consumido — reversión desde ${imExhSignal.levelLabel}`);
+        console.log(`[TRADES] IM Exhaustion: ${cfdTarget} ${imExhSignal.direction} from ${imExhSignal.levelLabel} (${(imExhSignal.consumed * 100).toFixed(0)}% IM consumed)`);
+      }
+    }
+
+    // ── GAMMA SQUEEZE ────────────────────────────────────────────────────────
+    if (!breakoutSignal && !bounceSignal && tradeType !== "im_exhaustion") {
+      const etfFlipEarly = cfdTarget === "XAUUSD" ? etfGex?.["GLD"]?.gammaFlipLevel
+        : cfdTarget === "US30" ? etfGex?.["DIA"]?.gammaFlipLevel
+        : undefined;
+      const gammaFlipEarly = (etfFlipEarly && etfFlipEarly > 0) ? etfFlipEarly : (primaryAsset.gammaFlipLevel || 0);
+      const gammaSqueezeSignal = detectGammaSqueeze(
+        primaryAsset, primarySGLevels, cfdTarget, cfdPrice,
+        primarySGLevels?.gammaRegime || "neutral",
+        gammaFlipEarly,
+        !!breakoutSignal,
+      );
+      if (gammaSqueezeSignal) {
+        direction = gammaSqueezeSignal.direction;
+        tradeType = "gamma_squeeze";
+        reason = `💥 GAMMA SQUEEZE — cruce Gamma Flip $${gammaSqueezeSignal.flipLevel.toLocaleString()} con momentum ${gammaSqueezeSignal.momentum.toFixed(2)}%`;
+        const isBuy = gammaSqueezeSignal.direction === "LONG";
+        entryLevel = {
+          strike:            gammaSqueezeSignal.flipLevel,
+          hierarchy:         "dominant",
+          bias:              isBuy ? "buy" : "sell",
+          biasScore:         isBuy ? 85 : 15,
+          gammaNotional:     0,
+          callGammaNotional: 0,
+          putGammaNotional:  0,
+          outlierScore:      0,
+          distanceFromPrice: Math.abs(primaryAsset.currentPrice - gammaSqueezeSignal.flipLevel),
+          distancePct:       Math.abs(primaryAsset.currentPrice - gammaSqueezeSignal.flipLevel) / primaryAsset.currentPrice * 100,
+          isNearPrice:       true,
+          dealerExposure:    "short_gamma",
+          netPositioning:    0,
+          flowBias:          isBuy ? "bullish" : "bearish",
+          confluenceWithSG:  true,
+          sgLevelType:       "Gamma Flip",
+          isTopStrike:       false,
+        };
+        details.push(`[GAMMA_SQUEEZE] Cruce Gamma Flip $${gammaSqueezeSignal.flipLevel.toLocaleString()} con momentum ${gammaSqueezeSignal.momentum.toFixed(2)}%`);
+        console.log(`[TRADES] Gamma Squeeze: ${cfdTarget} ${gammaSqueezeSignal.direction} through Gamma Flip $${gammaSqueezeSignal.flipLevel} (${gammaSqueezeSignal.momentum.toFixed(2)}%)`);
+      }
+    }
+
+    // ── OPEX PIN ─────────────────────────────────────────────────────────────
+    if (!breakoutSignal && !bounceSignal && tradeType !== "im_exhaustion" && tradeType !== "gamma_squeeze") {
+      const opexPinSignal = detectOPEXPin(
+        primaryAsset, primarySGLevels, cfdTarget, cfdPrice, opexCtx, etTime,
+      );
+      if (opexPinSignal) {
+        direction = opexPinSignal.direction;
+        tradeType = "opex_pin";
+        reason = `📌 PIN OPEX $${opexPinSignal.pinStrike.toLocaleString()} — precio ${opexPinSignal.distancePct.toFixed(2)}% del strike de vencimiento`;
+        const isBuy = opexPinSignal.direction === "LONG";
+        entryLevel = {
+          strike:            opexPinSignal.pinStrike,
+          hierarchy:         "dominant",
+          bias:              isBuy ? "buy" : "sell",
+          biasScore:         isBuy ? 78 : 22,
+          gammaNotional:     0,
+          callGammaNotional: 0,
+          putGammaNotional:  0,
+          outlierScore:      0,
+          distanceFromPrice: Math.abs(primaryAsset.currentPrice - opexPinSignal.pinStrike),
+          distancePct:       opexPinSignal.distancePct,
+          isNearPrice:       true,
+          dealerExposure:    "long_gamma",
+          netPositioning:    0,
+          flowBias:          isBuy ? "bullish" : "bearish",
+          confluenceWithSG:  true,
+          sgLevelType:       primarySGLevels?.maxGamma === opexPinSignal.pinStrike ? "Max Gamma" : "Key Gamma",
+          isTopStrike:       false,
+        };
+        details.push(`[OPEX_PIN] ${opexCtx.opexType} — fade ${opexPinSignal.distancePct.toFixed(2)}% del pin $${opexPinSignal.pinStrike.toLocaleString()}`);
+        console.log(`[TRADES] OPEX Pin: ${cfdTarget} ${opexPinSignal.direction} fade from $${opexPinSignal.pinStrike} (${opexPinSignal.distancePct.toFixed(2)}%)`);
+      }
+    }
+
+    // ── HIRO DIVERGENCE ──────────────────────────────────────────────────────
+    if (!breakoutSignal && !bounceSignal && (tradeType === "gamma" || tradeType === "cross_asset")) {
+      const hiroDivSignal = detectHIRODivergence(primaryAsset, hiro, cfdTarget, group);
+      if (hiroDivSignal) {
+        direction = hiroDivSignal.direction;
+        tradeType = "hiro_divergence";
+        const priceDir = hiroDivSignal.pricePct > 0 ? `sube ${hiroDivSignal.pricePct.toFixed(2)}%` : `cae ${Math.abs(hiroDivSignal.pricePct).toFixed(2)}%`;
+        reason = `🔄 DIVERGENCIA HIRO — flujo ${hiroDivSignal.hiroSignal} vs precio ${priceDir}`;
+        // Si no hay entryLevel, usar el nivel más cercano existente o el precio actual
+        if (!entryLevel && levels.length > 0) {
+          entryLevel = levels[0];
+        }
+        details.push(`[HIRO_DIVERGENCE] HIRO ${hiroDivSignal.hiroSignal.toUpperCase()} vs precio ${priceDir} — divergencia ${hiroDivSignal.strength}`);
+        console.log(`[TRADES] HIRO Divergence: ${cfdTarget} ${hiroDivSignal.direction} (HIRO ${hiroDivSignal.hiroSignal} vs price ${hiroDivSignal.pricePct.toFixed(2)}%)`);
+      }
+    }
+
+    // ── CHARM FLOW ───────────────────────────────────────────────────────────
+    if (tradeType === "gamma" && direction === "NO_TRADE") {
+      const charmSignal = detectCharmFlow(cfdTarget, primaryAsset.dailyChangePct || 0, etTime);
+      if (charmSignal) {
+        direction = charmSignal.direction;
+        tradeType = "charm_flow";
+        reason = `🌀 CHARM FLOW ${charmSignal.session} — decay de opciones ${charmSignal.direction}`;
+        // Charm flow REQUIRES a structural level nearby to anchor the trade
+        const charmAnchor = levels.find(l =>
+          (l.hierarchy === "dominant" || l.hierarchy === "reaction") && l.distancePct < 0.5
+        );
+        if (!entryLevel && charmAnchor) {
+          entryLevel = charmAnchor;
+        } else if (!entryLevel) {
+          // No structural level nearby — skip charm flow
+          direction = "NO_TRADE";
+          tradeType = "gamma";
+          reason = "";
+        }
+        if (direction !== "NO_TRADE") details.push(`[CHARM_FLOW] ${charmSignal.reason}`);
+        console.log(`[TRADES] Charm Flow: ${cfdTarget} ${charmSignal.direction} ${charmSignal.session}`);
+      }
+    }
+
+    // ── NEWS REACTION ────────────────────────────────────────────────────────
+    if (tradeType === "gamma" && direction === "NO_TRADE") {
+      const macroForNews = getMacroAlert();
+      const newsSignal = detectNewsReaction(primaryAsset, macroForNews, hiro, cfdTarget, group);
+      if (newsSignal) {
+        direction = newsSignal.direction;
+        tradeType = "news_reaction";
+        reason = `📰 REACCIÓN ${newsSignal.event} — precio ${newsSignal.priceReaction > 0 ? "+" : ""}${newsSignal.priceReaction.toFixed(2)}% con HIRO confirmando (${newsSignal.minutesSinceRelease}min post-release)`;
+        // Use closest level as anchor
+        if (!entryLevel && levels.length > 0) {
+          const anchor = levels.find(l => l.hierarchy === "dominant" || l.hierarchy === "reaction");
+          if (anchor) entryLevel = anchor;
+          else entryLevel = levels[0];
+        }
+        details.push(`[NEWS_REACTION] ${newsSignal.event}: ${newsSignal.priceReaction.toFixed(2)}% (${newsSignal.minutesSinceRelease}min)`);
+        console.log(`[TRADES] News Reaction: ${cfdTarget} ${newsSignal.direction} after ${newsSignal.event} (${newsSignal.priceReaction.toFixed(2)}%)`);
+      }
+    }
+
+    // ── PPO Puro: direction already decided by PPO Multi-Head ────────────────
+    // No RL override/confirm logic. PPO's direction is final.
+    if (fullRLDecision && direction === "NO_TRADE") {
+      // PPO decided a direction but rules found NO_TRADE — PPO overrides
+      const ppoDir = fullRLDecision.direction as "LONG" | "SHORT";
+      if (ppoDir === "LONG" || ppoDir === "SHORT") {
+        direction = ppoDir;
+        // Pick entry level based on PPO's entry type preference
+        const prefType = fullRLDecision.entryLevelType ?? "dominant";
+        let ppoEntryLevel: typeof entryLevel =
+          levels.find(l => l.hierarchy === prefType)
+          ?? levels.find(l => l.hierarchy === "dominant")
+          ?? levels[0]
+          ?? null;
+
+        if (!ppoEntryLevel && primarySGLevels) {
+          const wallPrice = ppoDir === "LONG" ? primarySGLevels.putWall : primarySGLevels.callWall;
+          if (wallPrice > 0) {
+            ppoEntryLevel = {
+              strike: wallPrice,
+              hierarchy: prefType === "dominant" ? "dominant" : "reaction",
+              bias: ppoDir === "LONG" ? "buy" : "sell",
+              biasScore: ppoDir === "LONG" ? 72 : 28,
+              gammaNotional: 0, callGammaNotional: 0, putGammaNotional: 0,
+              outlierScore: 0,
+              distanceFromPrice: Math.abs(primaryAsset.currentPrice - wallPrice),
+              distancePct: Math.abs(primaryAsset.currentPrice - wallPrice) / primaryAsset.currentPrice * 100,
+              isNearPrice: true,
+              dealerExposure: ppoDir === "LONG" ? "long_gamma" : "short_gamma",
+              netPositioning: 0,
+              flowBias: ppoDir === "LONG" ? "bullish" : "bearish",
+              confluenceWithSG: true,
+              sgLevelType: ppoDir === "LONG" ? "Put Wall [PPO]" : "Call Wall [PPO]",
+              isTopStrike: false,
+            };
+          }
+        }
+
+        if (ppoEntryLevel) {
+          entryLevel = ppoEntryLevel;
+          tradeType = "gamma";
+          reason = `[PPO] ${cfdTarget} ${ppoDir} — PPO Multi-Head crea setup (risk=${fullRLDecision.riskProfile}, conf=${fullRLDecision.overallConfidence?.toFixed(0) ?? 0}%)`;
+          details.push(`[PPO-CREATED] dir=${ppoDir} entry=${prefType} risk=${fullRLDecision.riskProfile}`);
+          console.log(`[PPO] ${cfdTarget}: CREÓ setup ${ppoDir} (reglas no encontraron nada)`);
+        }
+      }
+    } else if (fullRLDecision && direction !== "NO_TRADE") {
+      // PPO confirms rule direction
+      details.push(`[PPO-CONFIRM] PPO confirma ${direction} risk=${fullRLDecision.riskProfile} (conf=${fullRLDecision.overallConfidence?.toFixed(0) ?? 0}%)`);
+    }
+
+    // 5. Six confirmations (different for indices vs gold)
+
+    // CONFIRMATION 1: GEX — each CFD uses its own GEX source
+    //   NAS100 (SPX/SPY/QQQ) → SPX TRACE 0DTE GEX
+    //   US30  (DIA)          → DIA own GEX from SpotGamma chart data
+    //   XAUUSD (GLD)         → GLD own GEX + UVXY/VIX refuge flow (dual signal)
+    let gexConfirmed = false;
+    let gexDetail = "";
+
+    // Helper: confirm GEX from a TradierGexData-shaped object (works for DIA and GLD)
+    const confirmEtfGex = (etfData: TradierGexData, price: number, sym: string): { confirmed: boolean; detail: string } => {
+      const pctRange = sym === "GLD" ? 0.03 : 0.02; // ±3% gold, ±2% DIA
+      const nearSupport = etfData.topSupport?.find(s => s.strike <= price && (price - s.strike) / price <= pctRange);
+      const nearResistance = etfData.topResistance?.find(r => r.strike >= price && (r.strike - price) / price <= pctRange);
+      const biasLabel = etfData.netBias === "bullish" ? "ALCISTA" : etfData.netBias === "bearish" ? "BAJISTA" : "NEUTRAL";
+      const flipLabel = etfData.gammaFlipLevel > 0 ? ` | Flip $${etfData.gammaFlipLevel.toFixed(0)}` : "";
+      const expiryLabel = etfData.is0DTE ? " ★0DTE" : " weekly";
+
+      if (direction === "LONG" && nearSupport) {
+        return { confirmed: true, detail: `GEX ${sym} SOPORTE en $${nearSupport.strike.toFixed(0)} (+${(nearSupport.netGex / 1e6).toFixed(0)}M)${expiryLabel}${flipLabel}.` };
+      } else if (direction === "LONG" && etfData.netBias === "bullish") {
+        return { confirmed: true, detail: `GEX ${sym} bias ${biasLabel} (total ${(etfData.totalGex / 1e6).toFixed(0)}M)${expiryLabel}${flipLabel}.` };
+      } else if (direction === "SHORT" && nearResistance) {
+        return { confirmed: true, detail: `GEX ${sym} RESISTENCIA en $${nearResistance.strike.toFixed(0)} (${(nearResistance.netGex / 1e6).toFixed(0)}M)${expiryLabel}${flipLabel}.` };
+      } else if (direction === "SHORT" && etfData.netBias === "bearish") {
+        return { confirmed: true, detail: `GEX ${sym} bias ${biasLabel} (total ${(etfData.totalGex / 1e6).toFixed(0)}M)${expiryLabel}${flipLabel}.` };
+      } else {
+        return { confirmed: false, detail: `GEX ${sym}: bias ${biasLabel} (${(etfData.totalGex / 1e6).toFixed(0)}M)${expiryLabel}${flipLabel} — no confirma.` };
+      }
+    };
+
+    if (cfdTarget === "XAUUSD") {
+      // GLD: own SpotGamma GEX as primary signal + UVXY/VIX as complementary
+      const gldGex = etfGex?.["GLD"];
+      const gldPrice = primaryAsset.currentPrice;
+      let gexFromGLD = { confirmed: false, detail: "GEX GLD sin datos." };
+      let uvxyDetail = "";
+      let uvxyConfirmed = false;
+
+      if (gldGex && gldGex.gexByStrike.length > 0) {
+        gexFromGLD = confirmEtfGex(gldGex, gldPrice, "GLD");
+      }
+
+      if (vannaContext) {
+        const uvxyPct = vannaContext.uvxyChangePct;
+        const vixPct = vannaContext.vixChangePct;
+        if (direction === "LONG" && (uvxyPct > 2 || vixPct > 1.5)) {
+          uvxyConfirmed = true;
+          uvxyDetail = `UVXY +${uvxyPct.toFixed(1)}% VIX +${vixPct.toFixed(1)}%: miedo activo = flujo refugio.`;
+        } else if (direction === "SHORT" && (uvxyPct < -2 || vixPct < -1.5)) {
+          uvxyConfirmed = true;
+          uvxyDetail = `UVXY ${uvxyPct.toFixed(1)}% VIX ${vixPct.toFixed(1)}%: calma = salida de refugio.`;
+        } else {
+          uvxyDetail = `UVXY ${vannaContext.uvxyChangePct.toFixed(1)}% VIX ${vannaContext.vixChangePct.toFixed(1)}%.`;
+        }
+      }
+
+      // Confirmed if GEX OR UVXY confirms; both confirming = extra strong (handled by gexStrengthPct bonus)
+      gexConfirmed = gexFromGLD.confirmed || uvxyConfirmed;
+      const bothConfirm = gexFromGLD.confirmed && uvxyConfirmed;
+      gexDetail = bothConfirm
+        ? `★ DOBLE: ${gexFromGLD.detail} + ${uvxyDetail}`
+        : gexFromGLD.confirmed
+          ? gexFromGLD.detail
+          : uvxyConfirmed
+            ? uvxyDetail
+            : `${gexFromGLD.detail} ${uvxyDetail}`;
+
+    } else if (cfdTarget === "US30") {
+      // DIA: use DIA's own SpotGamma GEX (independent of SPX TRACE)
+      const diaGex = etfGex?.["DIA"];
+      const diaPrice = primaryAsset.currentPrice; // DIA price ~$470
+
+      if (diaGex && diaGex.gexByStrike.length > 0) {
+        const result = confirmEtfGex(diaGex, diaPrice, "DIA");
+        gexConfirmed = result.confirmed;
+        gexDetail = result.detail;
+      } else {
+        // Fallback to SPX TRACE if DIA GEX unavailable
+        gexDetail = "GEX DIA sin datos — usando TRACE SPX.";
+        if (traceData && traceData.zeroDteGex && traceData.zeroDteGex.length > 0) {
+          const spxAsset = assets.find(a => a.symbol === "SPX");
+          const spxPrice = spxAsset?.currentPrice || primaryAsset.currentPrice;
+          const nearestSupport = traceData.topSupport?.find((s: any) => s.strike <= spxPrice && spxPrice - s.strike <= 50);
+          const nearestResistance = traceData.topResistance?.find((r: any) => r.strike >= spxPrice && r.strike - spxPrice <= 50);
+          if (direction === "LONG" && nearestSupport) {
+            gexConfirmed = true;
+            gexDetail = `TRACE SPX SOPORTE $${nearestSupport.strike} (fallback DIA).`;
+          } else if (direction === "LONG" && traceData.netGexBias === "bullish") {
+            gexConfirmed = true;
+            gexDetail = `TRACE SPX bias ALCISTA (fallback DIA).`;
+          } else if (direction === "SHORT" && nearestResistance) {
+            gexConfirmed = true;
+            gexDetail = `TRACE SPX RESISTENCIA $${nearestResistance.strike} (fallback DIA).`;
+          } else if (direction === "SHORT" && traceData.netGexBias === "bearish") {
+            gexConfirmed = true;
+            gexDetail = `TRACE SPX bias BAJISTA (fallback DIA).`;
+          }
+        }
+      }
+
+    } else {
+      // NAS100 (SPX/SPY/QQQ): SPX TRACE 0DTE GEX
+      gexDetail = "0DTE GEX SPX sin datos.";
+      if (traceData && traceData.zeroDteGex && traceData.zeroDteGex.length > 0 && hasGex) {
+        const spxAsset = assets.find(a => a.symbol === "SPX");
+        const spxPrice = spxAsset?.currentPrice || primaryAsset?.currentPrice || 0;
+        const nearestSupport = traceData.topSupport?.find((s: any) => s.strike <= spxPrice && spxPrice - s.strike <= 50);
+        const nearestResistance = traceData.topResistance?.find((r: any) => r.strike >= spxPrice && r.strike - spxPrice <= 50);
+
+        if (direction === "LONG" && nearestSupport) {
+          gexConfirmed = true;
+          gexDetail = `0DTE GEX SOPORTE en $${nearestSupport.strike}: +${(nearestSupport.netGex / 1e6).toFixed(0)}M. Dealers compran dips.`;
+        } else if (direction === "LONG" && traceData.netGexBias === "bullish") {
+          gexConfirmed = true;
+          gexDetail = `0DTE GEX bias ALCISTA (ratio ${traceData.gexRatio.toFixed(2)}).`;
+        } else if (direction === "SHORT" && nearestResistance) {
+          gexConfirmed = true;
+          gexDetail = `0DTE GEX RESISTENCIA en $${nearestResistance.strike}: ${(nearestResistance.netGex / 1e6).toFixed(0)}M. Dealers venden rallies.`;
+        } else if (direction === "SHORT" && traceData.netGexBias === "bearish") {
+          gexConfirmed = true;
+          gexDetail = `0DTE GEX bias BAJISTA (ratio ${traceData.gexRatio.toFixed(2)}).`;
+        } else {
+          gexDetail = `0DTE GEX: bias ${traceData.netGexBias.toUpperCase()}, ratio ${traceData.gexRatio.toFixed(2)}.`;
+        }
+      }
+    }
+
+    // CONFIRMATION 2: HIRO (per-asset)
+    let hiroConfirmed = false;
+    let hiroDetail = "HIRO sin datos.";
+    if (hiro) {
+      // Check all assets in the group for HIRO consensus
+      let hiroBullish = 0;
+      let hiroBearish = 0;
+      for (const sym of group.assets) {
+        const assetHiro = hiro.perAsset?.[sym];
+        if (assetHiro) {
+          if (assetHiro.hiroTrend === "bullish") hiroBullish++;
+          else if (assetHiro.hiroTrend === "bearish") hiroBearish++;
+        }
+      }
+
+      const formatHiroVal = (v: number) => {
+        const abs = Math.abs(v);
+        if (abs >= 1e9) return `${(v / 1e9).toFixed(2)}B`;
+        if (abs >= 1e6) return `${(v / 1e6).toFixed(0)}M`;
+        return v.toFixed(0);
+      };
+
+      const primaryHiro = hiro.perAsset?.[primaryAsset.symbol];
+      const hiroVal = primaryHiro?.hiroValue ?? hiro.hiroValue;
+
+      if (direction === "LONG" && hiroBullish > hiroBearish) {
+        hiroConfirmed = true;
+        hiroDetail = `HIRO ALCISTA: ${hiroBullish}/${group.assets.length} activos con HIRO+. ${primaryAsset.symbol}: ${formatHiroVal(hiroVal)}.`;
+      } else if (direction === "SHORT" && hiroBearish > hiroBullish) {
+        hiroConfirmed = true;
+        hiroDetail = `HIRO BAJISTA: ${hiroBearish}/${group.assets.length} activos con HIRO-. ${primaryAsset.symbol}: ${formatHiroVal(hiroVal)}.`;
+      } else {
+        hiroDetail = `HIRO mixto: ${hiroBullish} alcistas, ${hiroBearish} bajistas. ${primaryAsset.symbol}: ${formatHiroVal(hiroVal)}.`;
+      }
+    }
+
+    // HIRO contradice: datos disponibles y mayoría claramente en dirección opuesta (-10 pts en score)
+    const hiroContradicts = !hiroConfirmed && hiro !== null && (() => {
+      let hiroBullish = 0, hiroBearish = 0;
+      for (const sym of group.assets) {
+        const t = hiro.perAsset?.[sym]?.hiroTrend;
+        if (t === "bullish") hiroBullish++;
+        else if (t === "bearish") hiroBearish++;
+      }
+      return (direction === "LONG"  && hiroBearish > hiroBullish) ||
+             (direction === "SHORT" && hiroBullish > hiroBearish);
+    })();
+
+    // CONFIRMATION 3: TAPE (per-asset flow)
+    let tapeConfirmed = false;
+    let tapeDetail = "Tape sin datos.";
+    if (tape?.perAsset) {
+      const assetFlow = tape.perAsset[primaryAsset.symbol];
+      if (assetFlow && assetFlow.totalTrades > 0) {
+        const fmtPremium = (p: number) => {
+          if (Math.abs(p) >= 1e6) return `$${(p / 1e6).toFixed(1)}M`;
+          if (Math.abs(p) >= 1e3) return `$${(p / 1e3).toFixed(1)}K`;
+          return `$${p.toFixed(0)}`;
+        };
+
+        if (direction === "LONG" && (assetFlow.sentiment === "bullish" || assetFlow.sentimentScore > 55)) {
+          tapeConfirmed = true;
+          tapeDetail = `Tape ${primaryAsset.symbol} ALCISTA (${assetFlow.sentimentScore}): Calls ${fmtPremium(assetFlow.callPremium)} vs Puts ${fmtPremium(assetFlow.putPremium)}.`;
+        } else if (direction === "SHORT" && (assetFlow.sentiment === "bearish" || assetFlow.sentimentScore < 45)) {
+          tapeConfirmed = true;
+          tapeDetail = `Tape ${primaryAsset.symbol} BAJISTA (${assetFlow.sentimentScore}): Puts ${fmtPremium(assetFlow.putPremium)} vs Calls ${fmtPremium(assetFlow.callPremium)}.`;
+        } else {
+          tapeDetail = `Tape ${primaryAsset.symbol}: ${assetFlow.sentiment} (score ${assetFlow.sentimentScore}).`;
+        }
+      }
+    }
+
+    // CONFIRMATION 4: LEVEL/OUTLIER near price
+    // "confirmado" = precio dentro del threshold de entrada (0.15% nativos, 0.525% cross-asset)
+    // Un nivel dentro del umbral principal ya cuenta como confirmado — no hay razón para exigir la mitad.
+    // Cross-asset: dentro de $0.50 del companion
+    // Nativo GLD/DIA: dentro de $0.50 (absoluto)
+    // Nativo SPX: dentro del maxDistPct (porcentaje)
+    let levelConfirmed = entryLevel !== null && (
+      entryLevel.isCrossAsset
+        ? (entryLevel.companionAbsDist ?? Infinity) <= CROSS_ASSET_ABS_THRESHOLD
+        : nativeWithinThreshold(entryLevel)
+    );
+    let levelDetail = entryLevel
+      ? `Nivel $${entryLevel.strike.toLocaleString()} a ${entryLevel.distancePct.toFixed(2)}% (${entryLevel.hierarchy}${entryLevel.confluenceWithSG ? ` + ${entryLevel.sgLevelType}` : ""}).`
+      : "Sin nivel cercano.";
+
+    // CONFIRMATION 5: VANNA
+    let vannaConfirmed = false;
+    let vannaDetail = "Sin vanna activo.";
+    if (vannaContext) {
+      if ((cfdTarget === "NAS100" || cfdTarget === "US30") && vannaContext.indexVannaActive) {
+        if ((direction === "LONG" && vannaContext.vixVannaSignal === "bullish") ||
+            (direction === "SHORT" && vannaContext.vixVannaSignal === "bearish")) {
+          vannaConfirmed = true;
+          vannaDetail = `Vanna indices ${vannaContext.vixVannaSignal === "bullish" ? "ALCISTA" : "BAJISTA"} (${vannaContext.vixVannaStrength}): VIX ${vannaContext.vixChangePct > 0 ? "+" : ""}${vannaContext.vixChangePct.toFixed(1)}%.`;
+        } else {
+          vannaDetail = `Vanna indices ${vannaContext.vixVannaSignal.toUpperCase()} NO confirma ${direction}.`;
+        }
+      } else if (cfdTarget === "XAUUSD") {
+        if (vannaContext.goldVannaActive || vannaContext.refugeFlowActive) {
+          const gldConfirmsLong = (vannaContext.gldVannaSignal === "bullish" || vannaContext.refugeFlowActive);
+          const gldConfirmsShort = vannaContext.gldVannaSignal === "bearish";
+          if ((direction === "LONG" && gldConfirmsLong) || (direction === "SHORT" && gldConfirmsShort)) {
+            vannaConfirmed = true;
+            vannaDetail = vannaContext.refugeFlowActive
+              ? `FLUJO REFUGIO: UVXY +${vannaContext.uvxyChangePct.toFixed(1)}% + GLD HIRO+. Oro como refugio.`
+              : `Vanna GLD ${vannaContext.gldVannaSignal === "bullish" ? "ALCISTA" : "BAJISTA"} (${vannaContext.gldVannaStrength}): IV GLD ${(vannaContext.gldIVChange * 100).toFixed(1)}%.`;
+          } else {
+            vannaDetail = `Vanna GLD ${vannaContext.gldVannaSignal.toUpperCase()} NO confirma ${direction}.`;
+          }
+        }
+      }
+    }
+
+    // CONFIRMATION 6: GAMMA REGIME
+    let regimeConfirmed = false;
+    let regimeDetail = "Sin datos de regimen.";
+    if (primarySGLevels) {
+      const regime = primarySGLevels.gammaRegime;
+      if (direction === "LONG") {
+        if (regime === "positive") {
+          regimeConfirmed = true;
+          regimeDetail = `Gamma POSITIVO: Mean reversion activo. Dealers frenan caidas = COMPRA favorecida.`;
+        } else if (regime === "negative") {
+          regimeDetail = `Gamma NEGATIVO: Trending. Compra riesgosa, mejor esperar gamma+ o usar solo con confluencia fuerte.`;
+          // Still allow if other confirmations are strong
+        } else if (regime === "very_negative") {
+          regimeDetail = `Gamma MUY NEGATIVO: Alta volatilidad. COMPRA muy riesgosa. Solo con 5+ confirmaciones.`;
+        }
+      } else if (direction === "SHORT") {
+        if (regime === "negative" || regime === "very_negative") {
+          regimeConfirmed = true;
+          regimeDetail = `Gamma ${regime === "very_negative" ? "MUY " : ""}NEGATIVO: Trending bajista. Dealers amplifican caidas = VENTA favorecida.`;
+        } else if (regime === "positive") {
+          regimeDetail = `Gamma POSITIVO: Mean reversion. Venta riesgosa, dealers frenan caidas.`;
+        }
+      }
+      regimeDetail += ` | ${primarySGLevels.regimeDescription}`;
+    }
+
+    // ── Bounce overrides for regime + level confirmations ────────────────
+    if (tradeType === "bounce" && bounceSignal) {
+      levelConfirmed = true;
+      levelDetail = `${bounceSignal.direction === "LONG" ? "REBOTE" : "RECHAZO"} en ${bounceSignal.levelLabel} $${bounceSignal.levelPrice.toLocaleString()} (${bounceSignal.distancePct.toFixed(2)}% del nivel).`;
+
+      if (bounceSignal.direction === "LONG") {
+        if (bounceSignal.regimeType === "positive") {
+          regimeConfirmed = true;
+          regimeDetail = `Gamma POSITIVO: Mean reversion activo — dealers frenan caídas, COMPRA favorecida desde ${bounceSignal.levelLabel}.`;
+        } else if (bounceSignal.levelLabel === "Gamma Flip" || bounceSignal.levelLabel === "Zero Gamma") {
+          regimeConfirmed = true;
+          regimeDetail = `Cruce alcista del ${bounceSignal.levelLabel} — dealers pasan de short a long gamma, amplificando el rebote.`;
+        } else {
+          regimeDetail = `Gamma ${bounceSignal.regimeType === "very_negative" ? "MUY " : ""}NEGATIVO: rebote táctico desde ${bounceSignal.levelLabel} — TP conservador.`;
+        }
+      } else {
+        if (bounceSignal.regimeType === "positive") {
+          regimeConfirmed = true;
+          regimeDetail = `Gamma POSITIVO: Mean reversion activo — dealers frenan subidas, VENTA favorecida desde ${bounceSignal.levelLabel}.`;
+        } else if (bounceSignal.levelLabel === "Gamma Flip" || bounceSignal.levelLabel === "Zero Gamma") {
+          regimeConfirmed = true;
+          regimeDetail = `Cruce bajista del ${bounceSignal.levelLabel} — dealers pasan de long a short gamma, amplificando el rechazo.`;
+        } else if (bounceSignal.regimeType === "negative" || bounceSignal.regimeType === "very_negative") {
+          regimeConfirmed = true;
+          regimeDetail = `Gamma ${bounceSignal.regimeType === "very_negative" ? "MUY " : ""}NEGATIVO: rechazo en ${bounceSignal.levelLabel} con dealers amplificando movimiento bajista.`;
+        } else {
+          regimeDetail = `Régimen neutral: rechazo táctico desde ${bounceSignal.levelLabel} — TP conservador.`;
+        }
+      }
+    }
+
+    // ── Breakout overrides for regime + level confirmations ──────────────
+    // For breakout: regime is ALWAYS confirmed (negative gamma IS the signal),
+    // and the SG wall is the entry level (already verified by detectBreakout).
+    if (tradeType === "breakout" && breakoutSignal) {
+      const regime = primarySGLevels?.gammaRegime || "negative";
+      regimeConfirmed = true;
+      regimeDetail = `Gamma ${regime === "very_negative" ? "MUY " : ""}NEGATIVO: RUPTURA ${direction === "SHORT" ? "bajista" : "alcista"} — dealers short gamma amplifican el movimiento a través del ${breakoutSignal.wallName}.`;
+      if (primarySGLevels?.regimeDescription) regimeDetail += ` | ${primarySGLevels.regimeDescription}`;
+
+      levelConfirmed = true;
+      levelDetail = `RUPTURA ${breakoutSignal.wallName} $${breakoutSignal.wallPrice.toLocaleString()} a ${(Math.abs(primaryAsset.currentPrice - breakoutSignal.wallPrice) / primaryAsset.currentPrice * 100).toFixed(2)}%. ${breakoutSignal.flowScore}/5 flujos confirman.`;
+    }
+
+    // 6. Calculate SL/TP in CFD prices
+    let stopLoss = 0, stopLossPoints = 0, stopLossRiskUSD = 0, stopLossReason = "N/A";
+    let tp1 = 0, tp1Pts = 0, tp2 = 0, tp2Pts = 0, tp3 = 0, tp3Pts = 0;
+    let takeProfitReason = "N/A";
+    let riskRewardRatio = 0;
+    let breakEvenTrigger = 0, trailingStopTrigger = 0;
+
+    if (direction !== "NO_TRADE" && cfdPrice > 0) {
+      const currentGammaRegime = primarySGLevels?.gammaRegime ?? "neutral";
+      const currentSessionDate = new Date().toISOString().slice(0, 10);
+      // Get macro alert early so slMult can widen the SL before TP is calculated
+      const macroAlertForSL = getMacroAlert();
+      const slResult = calculateCFDStopLoss(direction, cfdPrice, cfdTarget, levels, primaryAsset.currentPrice, primarySGLevels, vannaContext || null, primaryAsset.ivRank ?? 30, currentGammaRegime, currentSessionDate, macroAlertForSL.slMult);
+      stopLoss = slResult.sl;
+      stopLossPoints = slResult.slPoints;
+      stopLossRiskUSD = slResult.slRiskUSD;
+      stopLossReason = slResult.reason;
+
+      // ── RL Full Decision: apply risk profile SL multiplier (overrides policy) ──
+      const fullSlMult = fullRLDecision?.slMultiplier ?? 1.0;
+      const fullRiskLabel = fullRLDecision?.riskProfile ?? "normal";
+      if (fullSlMult !== 1.0) {
+        stopLossPoints = Math.round(stopLossPoints * fullSlMult * 100) / 100;
+        stopLoss = direction === "LONG" ? cfdPrice - stopLossPoints : cfdPrice + stopLossPoints;
+        stopLossRiskUSD = Math.round(stopLossPoints * spec.valuePerPoint * 100) / 100;
+        stopLossReason += ` [RL-${fullRiskLabel.toUpperCase()} x${fullSlMult}]`;
+      }
+
+      // ── Breakout SL: wall-anchored + same 5 dynamic factors ────────────
+      // Base: wall price ± buffer. Then apply the SAME volatility adjustments
+      // as bounce SL (VIX, GEX regime, time of day, day type, macro event).
+      if (tradeType === "breakout" && breakoutSignal) {
+        const wallCFD = breakoutSignal.wallCFDPrice;
+
+        // Base buffer: 0.25% of price (structural margin beyond the wall)
+        let baseBuffer = cfdPrice * 0.0025;
+
+        // Factor 1: VIX + IV Rank
+        const bkVixPrice = vannaContext?.vixPrice ?? 18;
+        const { mult: bkVolMult, dynamicMinSL: bkMinSL, dynamicMaxRisk: bkMaxRisk, volDesc: bkVolDesc } =
+          getVolatilityAdjustedSLParams(bkVixPrice, primaryAsset.ivRank ?? 30, cfdTarget);
+        baseBuffer *= bkVolMult;
+
+        // Factor 2: GEX Regime
+        const { mult: bkGexMult, desc: bkGexDesc } = getGEXRegimeSLMult(currentGammaRegime);
+
+        // Factor 3: Time of day
+        const { mult: bkTimeMult, session: bkTimeSession } = getTimeOfDaySLMult();
+
+        // Factor 4: Day type
+        const { mult: bkDayMult, desc: bkDayDesc } = getDayTypeSLMult(currentSessionDate);
+
+        // Combine factors 2-4 with cap (same ±50% swing as bounce SL)
+        const bkSecondaryMult = Math.min(Math.max(bkGexMult * bkTimeMult * bkDayMult, 0.65), 1.65);
+        baseBuffer *= bkSecondaryMult;
+
+        // Factor 5: Macro event
+        if (macroAlertForSL.slMult > 1.0) {
+          baseBuffer *= macroAlertForSL.slMult;
+        }
+
+        // Calculate breakout SL = wall ± adjusted buffer
+        let bkSL: number;
+        if (direction === "SHORT") {
+          bkSL = wallCFD + baseBuffer;  // SL above the broken wall
+        } else {
+          bkSL = wallCFD - baseBuffer;  // SL below the broken wall
+        }
+        let bkSLPts = Math.abs(cfdPrice - bkSL);
+
+        // ── Same IM bounds as bounce SL (20%-65% of daily range) ─────────
+        if (primarySGLevels && primarySGLevels.impliedMovePct > 0 && spec.betaVsSPX > 0) {
+          const imPoints = (primarySGLevels.impliedMovePct / 100) * spec.betaVsSPX * cfdPrice;
+          const imFloor = imPoints * 0.20;
+          const imCap = imPoints * 0.65;
+          if (bkSLPts < imFloor) bkSLPts = imFloor;
+          else if (bkSLPts > imCap) bkSLPts = imCap;
+        }
+
+        // ── Same dynamic risk limits (VIX-scaled min/max) ────────────────
+        const bkRiskUSD = bkSLPts * spec.valuePerPoint;
+        if (bkRiskUSD > bkMaxRisk) bkSLPts = bkMaxRisk / spec.valuePerPoint;
+        if (bkSLPts < bkMinSL) bkSLPts = bkMinSL;
+
+        // Recalculate SL price from adjusted points
+        bkSL = direction === "SHORT" ? cfdPrice + bkSLPts : cfdPrice - bkSLPts;
+        const finalRisk = Math.round(bkSLPts * spec.valuePerPoint * 100) / 100;
+
+        stopLoss = bkSL;
+        stopLossPoints = bkSLPts;
+        stopLossRiskUSD = finalRisk;
+        stopLossReason = `RUPTURA ${breakoutSignal.wallName} $${breakoutSignal.wallPrice.toLocaleString()} [×${bkVolMult.toFixed(2)} ${bkVolDesc}] [GEX×${bkGexMult.toFixed(2)} ${bkGexDesc}] [${bkTimeSession}×${bkTimeMult.toFixed(2)}] [${bkDayDesc}×${bkDayMult.toFixed(2)}]`;
+      }
+
+      const tpResult = calculateCFDTakeProfits(direction, cfdPrice, stopLossPoints, cfdTarget, levels, primaryAsset.currentPrice, primarySGLevels);
+      tp1 = tpResult.tp1; tp1Pts = tpResult.tp1Pts;
+      tp2 = tpResult.tp2; tp2Pts = tpResult.tp2Pts;
+      tp3 = tpResult.tp3; tp3Pts = tpResult.tp3Pts;
+      takeProfitReason = tpResult.reason;
+      riskRewardRatio = tpResult.rr;
+
+      // ── RL Full Decision: apply risk profile TP adjustments ─────────
+      const fullTP1Pct = fullRLDecision?.tp1Pct ?? 0;
+      const fullTP2Pct = fullRLDecision?.tp2Pct ?? 0;
+      const fullTP3Pct = fullRLDecision?.tp3Pct ?? 0;
+      const applyRLProfile = fullRiskLabel !== "normal" && (fullTP1Pct > 0 || fullTP2Pct > 0 || fullTP3Pct > 0);
+      if (applyRLProfile) {
+        const rlTP1 = cfdPrice * fullTP1Pct;
+        const rlTP2 = cfdPrice * fullTP2Pct;
+        const rlTP3 = cfdPrice * fullTP3Pct;
+        if (fullRiskLabel === "tight") {
+          // Tight: cap TPs to be no further than the profile pcts
+          tp1Pts = Math.min(tp1Pts, rlTP1);
+          tp2Pts = Math.min(tp2Pts, rlTP2);
+          tp3Pts = Math.min(tp3Pts, rlTP3);
+        } else {
+          // Wide: floor TPs to be at least as far as the profile pcts
+          tp1Pts = Math.max(tp1Pts, rlTP1);
+          tp2Pts = Math.max(tp2Pts, rlTP2);
+          tp3Pts = Math.max(tp3Pts, rlTP3);
+        }
+        tp1Pts = Math.round(tp1Pts * 100) / 100;
+        tp2Pts = Math.round(tp2Pts * 100) / 100;
+        tp3Pts = Math.round(tp3Pts * 100) / 100;
+        tp1 = direction === "LONG" ? cfdPrice + tp1Pts : cfdPrice - tp1Pts;
+        tp2 = direction === "LONG" ? cfdPrice + tp2Pts : cfdPrice - tp2Pts;
+        tp3 = direction === "LONG" ? cfdPrice + tp3Pts : cfdPrice - tp3Pts;
+        riskRewardRatio = stopLossPoints > 0 ? Math.round((tp2Pts / stopLossPoints) * 10) / 10 : 0;
+        takeProfitReason += ` [RL-${fullRiskLabel.toUpperCase()}]`;
+      }
+
+      // Trade management triggers
+      const tpDistance = direction === "LONG" ? tp2 - cfdPrice : cfdPrice - tp2;
+      breakEvenTrigger = direction === "LONG" ? cfdPrice + tpDistance * 0.5 : cfdPrice - tpDistance * 0.5;
+      trailingStopTrigger = direction === "LONG" ? cfdPrice + tpDistance * 0.75 : cfdPrice - tpDistance * 0.75;
+    }
+
+    // Mejora A: Trailing Stop Config
+    let trailingStopConfig: TradeSetup["trailingStopConfig"] | undefined;
+    if (direction !== "NO_TRADE" && cfdPrice > 0 && tp1Pts > 0 && tp2Pts > 0) {
+      const tp1LockSL = cfdPrice; // breakeven cuando toca TP1
+      const tp1Price = direction === "LONG" ? cfdPrice + tp1Pts : cfdPrice - tp1Pts;
+      // midTP1TP2LockSL: cuando llega al 50% entre TP1 y TP2, SL sube a TP1
+      const midTP1TP2LockSL = tp1Price;
+      // tp2TrailPct: 30% del rango TP1→TP2
+      const tp2TrailPct = 0.3;
+      trailingStopConfig = { tp1LockSL, midTP1TP2LockSL, tp2TrailPct };
+    }
+
+    // 7a. GEX strength score — each CFD uses its own GEX source
+    let gexStrengthPct = 0;
+    if (gexConfirmed) {
+      if (cfdTarget === "XAUUSD") {
+        // GLD: strength from GLD GEX bars + bonus if UVXY also confirms
+        const gldGex = etfGex?.["GLD"];
+        if (gldGex && gldGex.gexByStrike.length > 0) {
+          const allMags = gldGex.gexByStrike.map(b => Math.abs(b.netGex));
+          const sorted = [...allMags].sort((a, b) => a - b);
+          const nearLevels = [...(gldGex.topSupport || []), ...(gldGex.topResistance || [])];
+          const nearest = nearLevels.sort((a, b) => Math.abs(a.strike - primaryAsset.currentPrice) - Math.abs(b.strike - primaryAsset.currentPrice))[0];
+          if (nearest && sorted.length > 0) {
+            const rank = sorted.filter(v => v <= Math.abs(nearest.netGex)).length;
+            gexStrengthPct = Math.round((rank / sorted.length) * 100);
+          }
+          // Bonus: if GEX + UVXY both confirmed, boost strength by 15 pts (cap 100)
+          if (gexDetail.startsWith("★ DOBLE")) gexStrengthPct = Math.min(100, gexStrengthPct + 15);
+        }
+      } else if (cfdTarget === "US30") {
+        // DIA: strength from DIA GEX bars
+        const diaGex = etfGex?.["DIA"];
+        if (diaGex && diaGex.gexByStrike.length > 0) {
+          const allMags = diaGex.gexByStrike.map(b => Math.abs(b.netGex));
+          const sorted = [...allMags].sort((a, b) => a - b);
+          const nearLevels = [...(diaGex.topSupport || []), ...(diaGex.topResistance || [])];
+          const nearest = nearLevels.sort((a, b) => Math.abs(a.strike - primaryAsset.currentPrice) - Math.abs(b.strike - primaryAsset.currentPrice))[0];
+          if (nearest && sorted.length > 0) {
+            const rank = sorted.filter(v => v <= Math.abs(nearest.netGex)).length;
+            gexStrengthPct = Math.round((rank / sorted.length) * 100);
+          }
+        }
+      } else if (traceData?.zeroDteGex && traceData.zeroDteGex.length > 0) {
+        // NAS100: SPX TRACE 0DTE GEX percentile
+        const allGexMags = traceData.zeroDteGex.map((b: any) => Math.abs(b.netGex));
+        const sortedGexMags = [...allGexMags].sort((a, b) => a - b);
+        const spxAssetForGex = assets.find(a => a.symbol === "SPX");
+        const spxPx = spxAssetForGex?.currentPrice || primaryAsset.currentPrice;
+        const nearestBar = traceData.topSupport?.find((s: any) => Math.abs(s.strike - spxPx) < 100)
+          || traceData.topResistance?.find((r: any) => Math.abs(r.strike - spxPx) < 100);
+        if (nearestBar && sortedGexMags.length > 0) {
+          const nearestMag = Math.abs(nearestBar.netGex);
+          const rank = sortedGexMags.filter(v => v <= nearestMag).length;
+          gexStrengthPct = Math.round((rank / sortedGexMags.length) * 100);
+        }
+      }
+    }
+
+    // 7b. Setup invalidation conditions
+    // For GLD/DIA: prefer etfGex gammaFlipLevel (computed from actual GEX bars, more precise)
+    // than the chart-curve interpolation in primaryAsset.gammaFlipLevel
+    const etfFlip = cfdTarget === "XAUUSD" ? etfGex?.["GLD"]?.gammaFlipLevel
+      : cfdTarget === "US30" ? etfGex?.["DIA"]?.gammaFlipLevel
+      : undefined;
+    const gammaFlipLevel = (etfFlip && etfFlip > 0) ? etfFlip : (primaryAsset.gammaFlipLevel || 0);
+    const gammaFlipCFD = gammaFlipLevel > 0 && cfdPrice > 0 && primaryAsset.currentPrice > 0
+      ? cfdPrice - (primaryAsset.currentPrice - gammaFlipLevel) / primaryAsset.currentPrice * cfdPrice
+      : 0;
+    const hiroReversed = (() => {
+      if (!hiro?.perAsset?.[primaryAsset.symbol]) return false;
+      const h = hiro.perAsset[primaryAsset.symbol];
+      return (direction === "LONG" && h.hiroTrend === "bearish") ||
+             (direction === "SHORT" && h.hiroTrend === "bullish");
+    })();
+    const vixDangerLevel = (cfdTarget === "NAS100" || cfdTarget === "US30") ? 30 : 0;
+    const invalidationConditions: string[] = [];
+    if (gammaFlipLevel > 0) {
+      if (direction === "LONG")
+        invalidationConditions.push(`Cierre bajo Gamma Flip $${gammaFlipLevel.toLocaleString()} (${cfdTarget}: ${gammaFlipCFD > 0 ? gammaFlipCFD.toFixed(0) : "N/A"})`);
+      else
+        invalidationConditions.push(`Cierre sobre Gamma Flip $${gammaFlipLevel.toLocaleString()}`);
+    }
+    if (hiroReversed)
+      invalidationConditions.push(`HIRO ${primaryAsset.symbol} revertido → flujo institucional en contra`);
+    if (vixDangerLevel > 0 && direction === "LONG")
+      invalidationConditions.push(`VIX > ${vixDangerLevel}: volatilidad extrema invalida LONG`);
+    if (entryLevel && direction === "LONG")
+      invalidationConditions.push(`Nivel $${entryLevel.strike.toLocaleString()} roto a la baja`);
+    else if (entryLevel && direction === "SHORT")
+      invalidationConditions.push(`Nivel $${entryLevel.strike.toLocaleString()} roto al alza`);
+
+    // 7c. Volatility intelligence
+    const ivRankValue = primaryAsset.ivRank || 0;
+    const ivRegime: "high_iv" | "normal_iv" | "low_iv" =
+      ivRankValue > 70 ? "high_iv" : ivRankValue < 30 ? "low_iv" : "normal_iv";
+
+    const neSkew = primarySGLevels?.neSkew || 0;
+    const skewBias: "put_skew" | "call_skew" | "neutral" =
+      neSkew < -0.05 ? "put_skew" : neSkew > 0.05 ? "call_skew" : "neutral";
+
+    const atmIV30 = primarySGLevels?.atmIV30 || 0;
+    const rv30sg = primarySGLevels?.rv30 || 0;
+    const vrpSG = primarySGLevels?.vrp || 0;
+
+    // 7. Score calculation REMOVED (Fase 3 PPO Puro)
+    // PPO Multi-Head decides everything — no score-based gating.
+    // Confirmations (gex, hiro, tape, level, vanna, regime) are still computed
+    // as they feed into the PPO's 46-feature input state.
+    const score = 0; // Score is now irrelevant; PPO decides entry/exit directly
+
+    // ── Entry quality assessment (session context now handled by PPO as feature) ─────
+    const entryQual  = assessEntryQuality(
+      direction,
+      entryLevel,
+      primaryAsset.currentPrice,
+      hiroConfirmed,
+      tapeConfirmed,
+      hiro !== null,
+      tape?.perAsset !== undefined && tape.perAsset[primaryAsset.symbol] !== undefined,
+    );
+    // Para bounce/rejection: el precio ya se alejó del nivel (eso ES la confirmación).
+    // Si el precio está en el lado correcto y dentro del rango de detección (≤2.5%),
+    // la calidad mínima es "valid" — la distancia es señal positiva, no negativa.
+    if (tradeType === "bounce" && bounceSignal && entryQual.quality === "watch") {
+      const onCorrectSide =
+        (direction === "LONG"  && primaryAsset.currentPrice > bounceSignal.levelPrice) ||
+        (direction === "SHORT" && primaryAsset.currentPrice < bounceSignal.levelPrice);
+      if (onCorrectSide && bounceSignal.distancePct <= 2.5) {
+        entryQual.quality = "valid";
+        entryQual.note = `${bounceSignal.levelLabel} $${bounceSignal.levelPrice.toLocaleString()} confirmado (${bounceSignal.distancePct.toFixed(2)}% ${direction === "LONG" ? "sobre soporte" : "bajo resistencia"}) — HIRO ✓ + Tape ✓`;
+      }
+    }
+
+    // ── Session context enrichment ─────────────────────────────────────────────
+    // Track session price using the CFD price for XAUUSD (more accurate than GLD ETF scale)
+    // and the primary asset price for equity indices (SPX, DIA)
+    const sessionTrackSymbol = cfdTarget === "XAUUSD" ? "XAUUSD" : primaryAsset.symbol;
+    const sessionTrackPrice  = cfdTarget === "XAUUSD" ? cfdPrice : primaryAsset.currentPrice;
+    updateSessionPrice(sessionTrackSymbol, sessionTrackPrice);
+
+    // Trend context: gamma flip (equity) or session open (gold, tracked in XAUUSD CFD scale)
+    // For XAUUSD: gammaFlipLevel is in GLD ETF scale (~$400s) but sessionTrackPrice is in CFD scale (~$4000s).
+    // Use gammaFlipCFD (already converted to CFD scale) so the comparison is apples-to-apples.
+    const trendFlipRef = cfdTarget === "XAUUSD" ? (gammaFlipCFD || 0) : gammaFlipLevel;
+    const trendCtx = direction !== "NO_TRADE"
+      ? getSessionTrend(sessionTrackSymbol, sessionTrackPrice, direction, trendFlipRef)
+      : null;
+    // Bounce/rejection trades operate ON the GEX level — they ARE the mean-reversion
+    // trend in positive gamma. Never penalize them as counter-trend.
+    if (trendCtx && tradeType === "bounce") trendCtx.isCounterTrend = false;
+
+    // % of implied move already consumed today (reusar imStatusEarly calculado antes)
+    const imStatus = imStatusEarly;
+
+    // Macro event calendar check (FOMC / CPI / NFP)
+    const macroAlert = getMacroAlert();
+
+    // Gap vs previous session close
+    const gapCtx = getGapContext(primaryAsset.symbol);
+
+    // Level freshness — track the touch, then read count
+    if (entryLevel) {
+      trackLevelTouch(primaryAsset.symbol, entryLevel.strike, primaryAsset.currentPrice);
+    }
+    const freshness = entryLevel
+      ? getLevelFreshness(primaryAsset.symbol, entryLevel.strike)
+      : null;
+
+    // DXY / TLT cached values (refresh fires async, won't block)
+    void refreshDXYTLT();
+    const { dxy, tlt } = getCachedDXYTLT();
+
+    // ── PPO Puro: Entry mode determined entirely by Multi-Head PPO ────────────
+    // No score thresholds, no session filters, no hard blocks.
+    // PPO heads: direction, risk, entry, sizing, session, overExtension, entryQuality, scoreThreshold
+    const isCounterTrend = !!(trendCtx?.isCounterTrend && trendCtx.source !== "none");
+
+    // Context summary lines (for logging only, not decisions)
+    const ctxParts: string[] = [];
+    if (trendCtx && trendCtx.source !== "none") {
+      ctxParts.push(trendCtx.isCounterTrend ? `⚠️ Contra-tendencia: ${trendCtx.trendLabel}` : `✓ ${trendCtx.trendLabel}`);
+    }
+    if (imStatus.isOverExtended) {
+      ctxParts.push(`🔴 Rango agotado: ${(imStatus.consumed * 100).toFixed(0)}% del IM ${imStatus.impliedMovePct.toFixed(2)}%`);
+    }
+    if (macroAlert.hasEvent) {
+      const timing = macroAlert.hoursUntil > 0 ? `en ${Math.round(macroAlert.hoursUntil * 60)}min` : `hace ${Math.round(-macroAlert.hoursUntil * 60)}min`;
+      ctxParts.push(`📅 ${macroAlert.event} ${macroAlert.time}ET (${timing})`);
+    }
+    if (gapCtx.hasGap) {
+      ctxParts.push(`Gap ${gapCtx.gapDir === "up" ? "↑" : "↓"} ${Math.abs(gapCtx.gapPct).toFixed(2)}%`);
+    }
+    if (cfdTarget === "XAUUSD" && dxy > 0) {
+      const dxyBias = direction === "SHORT" ? "✓ DXY favor" : "⚠️ DXY contra";
+      ctxParts.push(`${dxyBias} (${dxy.toFixed(2)})${tlt > 0 ? ` | TLT ${tlt.toFixed(1)}` : ""}`);
+    }
+    const ctxNote = ctxParts.length > 0 ? ` | ${ctxParts.join(" | ")}` : "";
+
+    // ── PPO-driven entry mode (no score, no thresholds) ─────────────────────
+    const mhDec = (fullRLDecision as any)?._mhDecision as MultiHeadDecision | undefined;
+    let entryMode: TradeSetup["entryMode"] = "NO_OPERAR";
+    let entryNote = "";
+
+    if (direction === "NO_TRADE") {
+      entryMode = "NO_OPERAR";
+      entryNote = "Sin señal de dirección.";
+
+    } else if (mhDec?.overExtension === "SKIP") {
+      // PPO decided to skip due to overextension
+      entryMode = "NO_OPERAR";
+      entryNote = `⛔ PPO: overExtension=SKIP (IM ${(imStatus.consumed * 100).toFixed(0)}%).${ctxNote}`;
+
+    } else if (mhDec?.session === "trade_now") {
+      // PPO says execute now
+      entryMode = "ENTRADA";
+      entryNote = `✅ PPO: ENTRADA | dir=${mhDec.direction} risk=${mhDec.risk} sizing=${mhDec.sizing} conf=${mhDec.confidence.toFixed(1)}% | ${entryQual.note}${ctxNote}`;
+
+    } else if (mhDec?.session === "wait") {
+      // PPO says wait
+      entryMode = "VIGILANCIA";
+      entryNote = `👁 PPO: WAIT — conf=${mhDec?.confidence.toFixed(1)}% ${entryQual.note}${ctxNote}`;
+    }
+
+    // Build details — vol intelligence first
+    if (ivRankValue > 0) {
+      const ivLabel = ivRegime === "high_iv" ? "ALTA ▲" : ivRegime === "low_iv" ? "BAJA ▼" : "NORMAL";
+      const ivPct = (atmIV30 * 100).toFixed(1);
+      const rvPct = (rv30sg * 100).toFixed(1);
+      const vrpPct = (vrpSG * 100).toFixed(1);
+      details.push(`[VOL] IV Rank: ${ivRankValue.toFixed(0)}% (${ivLabel}) | IV30: ${ivPct}% vs RV30: ${rvPct}% | VRP: ${vrpPct >= "0" ? "+" : ""}${vrpPct}%`);
+    }
+    if (skewBias !== "neutral" && Math.abs(neSkew) > 0.05) {
+      const skewDir = skewBias === "put_skew" ? "PUTS (presion bajista)" : "CALLS (complacencia)";
+      const skewWarning =
+        (skewBias === "put_skew" && direction === "LONG") ? " ⚠ Cautela: mercado comprando proteccion" :
+        (skewBias === "call_skew" && direction === "SHORT") ? " ⚠ Cautela: complacencia puede revertir" : "";
+      details.push(`[SKEW] ${skewDir} (neSkew: ${neSkew.toFixed(3)})${skewWarning}`);
+    }
+
+    // Build details — trade type header
+    const tradeTypeLabel = tradeType === "breakout"
+      ? `⚡ RUPTURA ${breakoutSignal?.wallName || ""} — precio rompe nivel, dealers amplifican`
+      : tradeType === "bounce"
+        ? bounceSignal?.direction === "SHORT"
+          ? `🔴 RECHAZO ${bounceSignal?.levelLabel || ""} — precio rechazado desde resistencia GEX`
+          : `🟢 REBOTE ${bounceSignal?.levelLabel || ""} — precio rebota desde soporte GEX`
+        : tradeType === "vanna_index" || tradeType === "vanna_gold"
+          ? `🔄 VANNA — flujo de volatilidad`
+          : tradeType === "refuge"
+            ? `🛡 REFUGIO — flujo a oro`
+            : tradeType === "im_exhaustion"
+              ? `⚡ AGOTAMIENTO ${(imStatusEarly.consumed * 100).toFixed(0)}% implied move — reversión desde nivel GEX`
+              : tradeType === "opex_pin"
+                ? `📌 PIN OPEX ${opexCtx.opexType} — fade al strike de vencimiento`
+                : tradeType === "hiro_divergence"
+                  ? `🔄 DIVERGENCIA HIRO — flujo institucional vs precio`
+                  : tradeType === "gamma_squeeze"
+                    ? `💥 GAMMA SQUEEZE — cruce Gamma Flip con momentum`
+                    : tradeType === "charm_flow"
+                      ? `🌀 CHARM FLOW — decay de opciones`
+                      : tradeType === "news_reaction"
+                        ? `📰 REACCIÓN NOTICIA — momentum post-macro`
+                        : `📊 REBOTE — precio rebota desde nivel gamma`;
+    details.push(`[TIPO] ${tradeTypeLabel}`);
+    details.push(`[${cfdTarget === "XAUUSD" ? "UVXY" : "GEX"}] ${gexConfirmed ? "✓" : "✗"} ${gexDetail}`);
+    details.push(`[HIRO] ${hiroConfirmed ? "✓" : hiroContradicts ? "⚠️-10" : "✗"} ${hiroDetail}`);
+    details.push(`[TAPE] ${tapeConfirmed ? "✓" : "✗"} ${tapeDetail}`);
+    details.push(`[NIVEL] ${levelConfirmed ? "✓" : "✗"} ${levelDetail}`);
+    details.push(`[VANNA] ${vannaConfirmed ? "✓" : "✗"} ${vannaDetail}`);
+    details.push(`[REGIMEN] ${regimeConfirmed ? "✓" : "✗"} ${regimeDetail}`);
+
+    if (consensus) {
+      details.push(`[CONSENSO] ${consensus.direction} (${consensus.consensusStrength}): ${consensus.details.join(" | ")}`);
+    }
+
+    // Add session/entry quality to details
+    details.push(`[SESIÓN] ${entryMode === "ENTRADA" ? "✅" : entryMode === "VIGILANCIA" ? "⏳" : "⛔"} ${entryNote}`);
+
+    if (direction !== "NO_TRADE" && cfdPrice > 0) {
+      details.push(`--- ${spec.label} @ ${spec.lotSize} lote ---`);
+      details.push(`Entrada: ${cfdPrice.toFixed(cfdTarget === "XAUUSD" ? 2 : 0)}`);
+      details.push(`SL: ${stopLoss.toFixed(cfdTarget === "XAUUSD" ? 2 : 0)} (${stopLossPoints.toFixed(1)} pts, $${stopLossRiskUSD.toFixed(2)} riesgo) - ${stopLossReason}`);
+      details.push(`TP1: ${tp1.toFixed(cfdTarget === "XAUUSD" ? 2 : 0)} (+${tp1Pts.toFixed(1)} pts) → cerrar 50%`);
+      details.push(`TP2: ${tp2.toFixed(cfdTarget === "XAUUSD" ? 2 : 0)} (+${tp2Pts.toFixed(1)} pts) → cerrar 30%`);
+      details.push(`TP3: ${tp3.toFixed(cfdTarget === "XAUUSD" ? 2 : 0)} (+${tp3Pts.toFixed(1)} pts) → trailing 20%`);
+      details.push(`R:R = 1:${riskRewardRatio.toFixed(1)}`);
+      details.push(`Break-even: ${breakEvenTrigger.toFixed(cfdTarget === "XAUUSD" ? 2 : 0)} | Trailing: ${trailingStopTrigger.toFixed(cfdTarget === "XAUUSD" ? 2 : 0)}`);
+    }
+
+    // Build SG levels context
+    const sgLevelsContext = primarySGLevels ? {
+      callWall: primarySGLevels.callWall,
+      putWall: primarySGLevels.putWall,
+      keyGamma: primarySGLevels.keyGamma,
+      maxGamma: primarySGLevels.maxGamma,
+      volTrigger: primarySGLevels.volTrigger,
+      impliedMove: primarySGLevels.impliedMove,
+      impliedMovePct: primarySGLevels.impliedMovePct,
+      gammaRegime: primarySGLevels.gammaRegime,
+    } : null;
+
+    setups.push({
+      asset: primaryAsset.symbol,
+      cfd: cfdTarget,
+      cfdLabel: spec.label,
+      tradeType,
+      direction,
+      score,
+      entryPrice: primaryAsset.currentPrice,
+      cfdEntryPrice: cfdPrice,
+      entryZone: entryLevel,
+      stopLoss, stopLossPoints, stopLossRiskUSD, stopLossReason,
+      takeProfit1: tp1, takeProfit1Points: tp1Pts,
+      takeProfit2: tp2, takeProfit2Points: tp2Pts,
+      takeProfit3: tp3, takeProfit3Points: tp3Pts,
+      takeProfitReason, riskRewardRatio,
+      breakEvenTrigger, trailingStopTrigger,
+      trailingStopConfig,
+      gexConfirmed, gexDetail,
+      hiroConfirmed, hiroDetail,
+      tapeConfirmed, tapeDetail,
+      levelConfirmed, levelDetail,
+      vannaConfirmed, vannaDetail,
+      regimeConfirmed, regimeDetail,
+      crossAssetConsensus: consensus,
+      sgLevels: sgLevelsContext,
+      vannaSignal: volAnalysis.vannaSignal,
+      invalidation: {
+        gammaFlipLevel,
+        gammaFlipCFD,
+        hiroReversed,
+        vixDangerLevel,
+        conditions: invalidationConditions,
+      },
+      gexStrengthScore: gexStrengthPct,
+      ivRegime,
+      ivRank: ivRankValue,
+      skewBias,
+      highVolPoint: primaryAsset.highVolPoint || 0,
+      lowVolPoint: primaryAsset.lowVolPoint || 0,
+      atmIV30,
+      rv30: rv30sg,
+      vrp: vrpSG,
+      dynamicTP: {
+        shouldAdjust: false,
+        reason: "Sin ajuste - lectura inicial.",
+        action: "hold",
+        adjustedTP1: 0,
+        adjustedTP2: 0,
+        confidence: 50,
+        lastChecked: new Date().toISOString(),
+      },
+      entryMode,
+      entryQuality: entryQual.quality,
+      entryNote,
+      sessionLabel: "PPO Puro",  // Session labels removed: PPO handles session context as feature
+      opexContext: opexCtx,
+      adaptivePolicy: fullRLDecision ? {
+        riskProfile: fullRLDecision.riskProfile ?? "normal",
+        slMultiplier: fullRLDecision.slMultiplier ?? 1.0,
+        tp1Pct: fullRLDecision.tp1Pct ?? 0,
+        tp2Pct: fullRLDecision.tp2Pct ?? 0,
+        tp3Pct: fullRLDecision.tp3Pct ?? 0,
+        entryMode: "ppo_pure",
+        setupTypeFilter: "all",
+        volumeMultiplier: 1.0,
+        confidence: fullRLDecision.overallConfidence ?? 0,
+        isExploring: false,
+        // PPO Multi-Head online learning state
+        ppoStateAtEntry:   fullRLDecision._ppoStateAtEntry ?? undefined,
+        ppoHeadActions:    fullRLDecision._ppoHeadActions ?? undefined,
+        ppoHeadLogProbs:   fullRLDecision._ppoHeadLogProbs ?? undefined,
+        ppoRisk:           fullRLDecision._ppoRisk ?? undefined,
+      } : undefined,
+      reason, details,
+      nearestLevels: nearLevels.slice(0, 5),
+      timestamp: new Date().toISOString(),
+    });
+
+    // ── SETUPS SECUNDARIOS: bounce en niveles adicionales ──────────────────────
+    // Cuando hay breakout, el ALT-0 también se genera (bounce en nivel diferente)
+    // Cuando no hay breakout, ya se usó bounceSignals[0] como setup principal
+    const altStartIdx = breakoutSignal ? 0 : 1;
+    for (let altIdx = altStartIdx; altIdx < bounceSignals.length && altIdx < (altStartIdx + 3); altIdx++) {
+      const altBounce = bounceSignals[altIdx];
+      if (!altBounce) break;
+      // Score reducido vs el principal
+      const altScore = Math.max(25, score - (altIdx * 12));
+      if (altScore < 25) break;
+      const altDir = altBounce.direction;
+      const altIsBuy = altDir === "LONG";
+      const altSL = altIsBuy
+        ? cfdPrice - stopLossPoints
+        : cfdPrice + stopLossPoints;
+      const altTP1 = altIsBuy
+        ? cfdPrice + stopLossPoints * 2
+        : cfdPrice - stopLossPoints * 2;
+      const altTP3 = altIsBuy
+        ? cfdPrice + stopLossPoints * 6
+        : cfdPrice - stopLossPoints * 6;
+
+      setups.push({
+        ...setups[setups.length - 1], // hereda campos calculados del setup base
+        direction: altDir,
+        tradeType: "bounce" as const,
+        score: altScore,
+        reason: `[ALT-${altIdx}] ${altBounce.reason}`,
+        entryMode: altScore >= 60 ? "VIGILANCIA" as const : "NO_OPERAR" as const,
+        entryQuality: "watch" as const,
+        entryNote: `👁 Setup alternativo en ${altBounce.levelLabel} (score reducido: ${altScore})`,
+        stopLoss: altSL,
+        stopLossPoints,
+        takeProfit1: altTP1,
+        takeProfit1Points: stopLossPoints * 2,
+        takeProfit3: altTP3,
+        takeProfit3Points: stopLossPoints * 6,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  return setups.sort((a, b) => b.score - a.score);
+}

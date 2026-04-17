@@ -1,0 +1,15 @@
+date,cfd,direction,mode,entry,exit,pnlPts,pnlDollars,exitReason,score,regime,vrp,vix,dxy,structure,barSize,ivRank,dow
+2026-03-18,NAS100,SHORT,intraday,24637.15,24632.15,5,0.5,trail,1,positive,positive,high,up,markdown,small,low,Wed
+2026-03-19,NAS100,SHORT,swing,24314.35,24309.35,5,0.75,trail,5,very_positive,positive,high,down,rotation_day,small,low,Thu
+2026-03-19,NAS100,SHORT,swing,24285.1,24280.1,5,0.5,trail,2,very_positive,positive,high,down,markdown,small,low,Thu
+2026-03-19,NAS100,SHORT,swing,24214.8,24266.54,-51.74,-7.76,sl,5,very_positive,positive,high,down,markdown,small,low,Thu
+2026-03-19,NAS100,SHORT,swing,24291.25,24286.25,5,0.5,trail,2,very_positive,positive,high,down,markdown,small,low,Thu
+2026-03-20,NAS100,SHORT,intraday,24340.6,24285.2,55.4,8.31,tp1,4,positive,positive,high,down,markdown,medium,mid,Fri
+2026-03-20,NAS100,SHORT,intraday,24345.1,24289.69,55.41,5.54,tp1,3,positive,positive,high,down,rotation_day,medium,mid,Fri
+2026-03-20,NAS100,SHORT,intraday,24303.3,24247.98,55.32,5.53,tp1,3,positive,positive,high,down,rotation_day,medium,mid,Fri
+2026-03-20,NAS100,SHORT,intraday,24175.65,24120.62,55.03,8.25,tp1,4,positive,positive,high,down,markdown,medium,mid,Fri
+2026-03-20,NAS100,SHORT,intraday,24193.8,24227.16,-33.36,-5,sl,6,positive,positive,high,down,markdown,medium,mid,Fri
+2026-03-20,NAS100,SHORT,swing,24240.75,24092.49,148.26,22.24,tp1,6,positive,positive,high,down,markdown,medium,mid,Fri
+2026-03-20,NAS100,SHORT,swing,24086.25,23938.93,147.32,22.1,tp1,4,positive,positive,high,down,markdown,medium,mid,Fri
+2026-03-20,NAS100,SHORT,swing,23995.75,23848.99,146.76,22.01,tp1,6,positive,positive,high,down,markdown,medium,mid,Fri
+2026-03-26,NAS100,SHORT,swing,23798.35,23793.35,5,0.5,trail,2,neutral,positive,high,up,markdown,large,mid,Thu
