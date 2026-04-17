@@ -160,6 +160,30 @@ Every FULL cycle MUST check ALL 14 items in order. No exceptions.
 - R:R minimum 1:1.5 (L48). SL behind the next structural gamma bar + buffer.
 - **Save the gamma bar map** to `agent-state.json → gammaBarsSnapshot` every cycle (strike, gamma, type, cfdPrice, distFromPrice). This survives session restarts.
 
+### 5.1 ⭐ DOMINANCE FLIP ANALYSIS (per strike) — **MANDATORY sub-check** (L113)
+**Each strike has two sides of dealer gamma. The MIX tells you WHICH mechanic drives the level, and the EVOLUTION tells you when the mechanic is changing.** Classic `type: support/resistance` only looks at gamma SIGN — this refinement looks at WHO owns the gamma and WHAT will happen at the level.
+
+- **Compute:** `callDominance = |callGamma| / (|callGamma| + |putGamma|)` per bar. Range 0-1.
+- **Categories (buckets):**
+  - `call_strong` (dom ≥ 0.80): call-driven strike
+  - `call_mod` (0.60-0.80): call-biased
+  - `flip_zone` (0.40-0.60): **LEADING INDICATOR** — strike transitioning
+  - `put_mod` (0.20-0.40): put-biased
+  - `put_strong` (dom < 0.20): put-driven strike
+- **Dealer interpretation (combining dominance + sign of callGamma/putGamma):**
+  - CALL-dom + callGamma>0 = `dealer_long_calls_support` (support by hedging demand in calls)
+  - CALL-dom + callGamma<0 = `dealer_short_calls_resistance` (classic call wall)
+  - PUT-dom + putGamma>0 = `dealer_long_puts_support` (they bought puts, hedge by buying stock when falling)
+  - PUT-dom + putGamma<0 = `dealer_short_puts_support_fragile` (support that unwinds violently when breaks)
+  - flip_zone = `mixed_flip_zone` (mechanic transitioning — highest leading value)
+- **Flip events (L113):** if a strike's dominance crosses 0.5 between cycles → log event to `flipHistory[]`. A call→put flip at a resistance strike = resistance hardening OR breakdown imminent. A put→call flip at a support strike = support weakening.
+- **How to use in entries:**
+  - **Strong call_strong red bar + callGamma<0** = strong structural resistance, SHORT with high conviction
+  - **flip_zone bar** = wait for flip confirmation OR place BOTH LONG and SHORT at edges of flip zone
+  - **dealer_short_puts_support_fragile** = support yes but BREAKS faster than classic support — use tighter SL on LONG, or prefer SHORT breakdown entries
+- **Run:** `node scripts/compute-dominance.cjs --save` (computes, saves snapshot, logs flips). Read `agent-state.json → dominanceSnapshot` for previous cycle comparison. Append flips to `data/flip-events.jsonl`.
+- **Report in cycle log:** top 3 flip_zone strikes + any flip events from this cycle.
+
 ### 6. VOLATILITY
 - Overall regime, term structure (contango/backwardation)
 - Per-asset IV + skew
@@ -367,6 +391,7 @@ Key lessons stored in agent-state.json. Most critical:
 - L110: **CLASSIFY MARKET STRUCTURE PER CFD EVERY CYCLE.** Accumulation, distribution, markup, markdown, congestion, squeeze, trend day, rotation day. The structure determines tradeMode and strategy. Don't fight the structure. Save to agent-state.json → marketStructure.
 - L111: **CONFLICT PRIORITY RULES.** When rules conflict: (1) Statistical rules (N>200) override single lessons. NAS SHORT very_neg=40%WR → use SCALP not INTRADAY/SWING. (2) L76 overnight rules override L83 LEVEL default. (3) Freefall (HIRO<P10 + bars breaking) overrides L105 congestion LONGs — SHORT only in freefall. (4) Flow magnitude > gamma magnitude = BREAK per L63, add +2 to L60 BREAK score. (5) When HIRO signals conflict between symbols (L92), trade the individual CFD based on ITS ETF HIRO (QQQ for NAS, DIA for US30). (6) Power hour HIRO changes are unreliable (L93) — don't change positions in last 60min based on HIRO alone.
 - L112: **TRADE MODE UPGRADE.** A SCALP can become INTRADAY, an INTRADAY can become SWING — but NEVER downgrade. When pyramid signals fire on a SCALP, upgrade to INTRADAY first. When HIRO goes extreme on an INTRADAY, upgrade to SWING. Update tradeMode, adjust SL/volume, enable pyramiding.
+- L113: **DOMINANCE FLIP PER STRIKE = LEADING INDICATOR.** Each strike has callGamma and putGamma — the ratio tells WHICH side drives the level. `callDominance = |callGamma|/(|callGamma|+|putGamma|)`. Buckets: ≥0.80 call_strong, 0.40-0.60 flip_zone, <0.20 put_strong. When dominance crosses 0.5 between cycles = **FLIP EVENT** — the market structure at that strike changed. A call→put flip at resistance = resistance weakening (breakout signal). A put→call flip at support = support weakening (breakdown signal). Strikes in flip_zone (0.40-0.60) are transitioning and are the highest-information strikes. Combined with gamma SIGN: `dealer_short_puts_support_fragile` (put-dom + negGamma) = support breaks faster than classic. Run `scripts/compute-dominance.cjs --save` each FULL cycle. Snapshot in `agent-state.json → dominanceSnapshot`, flip log in `data/flip-events.jsonl`.
 
 ## Statistical Rules (576-day backtest, 160K candles, 2,246 touch events)
 

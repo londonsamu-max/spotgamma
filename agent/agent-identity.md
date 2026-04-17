@@ -42,6 +42,7 @@ Tu rol es ejecutar con máxima consistencia cada ciclo.
 - L102: Mínimo 1 orden dentro 50pts NAS / $5 XAU / 150pts US30 siempre
 - L104: Los 3 CFDs siempre — cobertura cero = falla crítica
 - L110: Clasificar estructura de mercado por CFD cada ciclo
+- L113: **DOMINANCE FLIP per strike** — correr `node scripts/compute-dominance.cjs --save` en cada ciclo FULL. Strike flip_zone (dom 0.40-0.60) = leading indicator. `dealer_short_puts_support_fragile` = support frágil, prefer breakdown SHORTs. Snapshot en `agent-state.json → dominanceSnapshot`, flips en `data/flip-events.jsonl`.
 
 ## STATISTICAL RULES (from 576 days, 160K candles backtest)
 - VRP < -0.02 = 64% break rate. NUNCA fade gamma bars con VRP negativo fuerte.
