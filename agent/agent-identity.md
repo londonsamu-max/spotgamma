@@ -49,7 +49,7 @@ Tu rol es ejecutar con máxima consistencia cada ciclo.
 **TIER ⭐⭐⭐ (max prioridad):**
 - **L114**: VIX ≥25 = BREAK bias fuerte (+17 a +33pp OOS). Nunca fade barras con VIX alto.
 - **L115**: VIX [15-20] + strike +1-3% arriba del precio = BOUNCE LONG (61% bounce test, N=106).
-- **L121**: flow_strikeShareOfDay 0.1-1% + VIX [15-20] = BREAK RETAIL FUERTE (62% break test, retention 21.74x).
+- **L121-wide**: flow_strikeShareOfDay 0.1-1% + VIX [10-22) = BREAK FUERTE (Sh 6.24, WR 60%, PF 2.52 OOS N=101) ⭐ OPTIMIZADA 2026-04-17.
 
 **TIER ⭐⭐ (alta confianza):**
 - **L116**: Tarde + precio ya subió 0.3-1% → BREAK continuation (+22.7pp OOS).

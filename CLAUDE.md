@@ -447,18 +447,37 @@ Key lessons stored in agent-state.json. Most critical:
 - **L118 ⭐: oiRatio ≥ 0.7 (call-heavy strike) = FLAT BIAS.** ⚠️ **REQUIERE extensión server:** live feed solo expone `oi` total, no callOI/putOI. Hasta que se agregue, L118 inactiva. Cuando disponible: -7pp break, strikes call-heavy tienden a rango, usar para scalp range no directional.
 - **L119 ⭐⭐: flow_strikeShareOfDay [0.1%, 1%] = BREAK.** Strike acumulando atención moderada (0.1-1% premium diario) rompe 54% en 4h, 53% EOD (+11pp OOS, N=178). ⚠️ **Limitación:** tape.strikeFlow live solo expone top-5, que típicamente tienen >5%. L119 requiere visibilidad de strikes fuera de top-5.
 - **L120 ⭐⭐: flow_strikeShareOfDay ≥ 5% = PIN/FLAT.** Strike de consenso con ≥5% flow = imán magnético. -19pp break OOS (23% vs 40% baseline). Usar como **TP magnético**, NO directional break entry. Activable en live (top-5 strikes en tape normalmente caen aquí).
-- **L121 ⭐⭐⭐: flow_strikeShareOfDay 0.1-1% + VIX LOW [15-20] = BREAK FUERTE.** El upgrade de L119. **62% break OOS en 4h** (edge CRECIÓ OOS de +20pp a +26pp, retention 21.74x). Mecanismo: retail momentum con dealers desatentos. Cuando activa, breakout con **máxima convicción** (posible SWING si continuation).
+- **L121-wide ⭐⭐⭐ (OPTIMIZADA 2026-04-17): flow_strikeShareOfDay 0.1-1% + VIX [10-22) = BREAK FUERTE.** Upgrade de L119. **Sharpe 6.24, WR 60%, PF 2.52 en OOS (N_test=101)** — el edge más confiable del sistema. Mecanismo: retail momentum con dealers desatentos. Rango VIX expandido de [15-20) a [10-22) triplica trigger rate manteniendo edge. Cuando activa, breakout continuación con conviction alta (SL 0.8% / TP 1.6%, R:R 1:2). En capital backtest aislado: +53.8% OOS con 2% risk → +67.5%.
 - **L122 ⭐⭐: largestPrem ≥ $1M + vixTrend5d = DOWN = BOUNCE LONG.** +14pp bounce OOS (N=31). Trade gigante (≥$1M) en el strike mientras VIX cae 5d = smart money comprando el piso. Entry LONG, SL debajo del strike siguiente.
 - **L123 ⭐: largestPrem [$200K, $1M] + vixTrend5d = FLAT = BREAK.** +17pp break OOS (N=33). Tamaño medio institucional sin dirección macro = reposicionamiento táctico, el strike cede.
 - **L124 ⭐: instShare < 0.5% + vixTrend5d = FLAT = BREAK (retail unchecked).** +13pp break OOS (N=64). Sin smart money + VIX flat = retail domina y empuja breakout.
 - **L125 ⭐: flow_strikeShareOfDay [1-5%] + sessionProgress [0.7-0.9] = BREAK LATE.** +14pp break OOS (N=155). Strike con atención creciente en última hora de sesión → rompe. Combina con L116.
 
-### PRIORIDAD DE LESSONS NUEVAS (L114-L125)
+### PRIORIDAD DE LESSONS NUEVAS (L114-L125) — **REVISADA 2026-04-17 post-optimizer**
 
-**Tier ⭐⭐⭐ (aplicar SIEMPRE):** L114, L115, L121
-**Tier ⭐⭐ (alta confianza):** L116, L119, L120, L122
-**Tier ⭐ (contexto, edge pequeño):** L117, L123, L124, L125
-**⚠️ Inactivas por limitación de data live:** L118 (necesita callOI/putOI split), L119/L121 parcialmente (top-5 strikes only)
+Tras correr optimizer con split train/test sobre 5,289 eventos, solo estos variantes sobreviven OOS (Sharpe >1, PF >1.2, retornos positivos):
+
+**Tier ⭐⭐⭐ OPTIMAL (confirmado OOS, aplicar directamente):**
+- **L114-vix30+**: VIX ≥30 → break cont. Sharpe **8.48**, WR 75%, PF 3.1, DD **4.7%** (N=53). El edge más limpio.
+- **L121-wide-risk2**: VIX [10-22) + share [0.1%, 1%] → break. Sharpe **6.24**, WR 60%, PF 2.5, +133% OOS con 2% risk (N=101).
+- **L119-tighter**: share [0.3%, 0.8%] → break (any VIX). Sharpe **5.62**, WR 63%, PF 2.3, DD 7.4% (N=90).
+
+**Tier ⭐⭐ GOOD (confirmed OOS, secondary):**
+- **L114-vix25_aft**: VIX ≥25 + afternoon → break. Sharpe 3.22, PF 1.57 (N=219). Mayor frecuencia.
+- **L115-bidir**: VIX low + strike ±1-3% del precio → bounce (SHORT arriba o LONG abajo). Sharpe 2.91, WR 63%, PF 1.54 (N=151).
+- **L116-down**: afternoon + price ya -0.3-1% bajo open → SHORT continuation. Sharpe 2.33, PF 1.43 (N=313). **Nota:** solo versión DOWN, versión UP falla OOS.
+- **L119-wider** (share 0.05-2% any VIX): Sharpe 2.16 pero N=494 (mucho volumen) y return +74%.
+
+**⛔ DEPRECADAS (fail OOS):**
+- **L117** (morning first hour bounce) → No edge. Deprecar.
+- **L120 directional** (pin fade) → Usar SOLO como TP magnético, nunca entry directional.
+- **L125** (moderate share + late session) → No edge real post-optimizer.
+- **L116-up** (afternoon + momentum UP → LONG) → Solo SHORT version funciona.
+- **L115 unidireccional** (solo approach up SHORT) → Requiere bidir.
+
+**⚠️ Inactivas por limitación data live:**
+- L118 (necesita callOI/putOI split server-side)
+- L122/L123/L124 (requieren vixTrend5d — aún construyéndose en memoria)
 
 ### JERARQUÍA CONFLICT L114 vs L94 (VIX existente)
 Cuando regla dice "VIX > X = más bounces" vs L114 "VIX ≥25 = breaks":
